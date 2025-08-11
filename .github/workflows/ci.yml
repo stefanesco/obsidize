@@ -46,6 +46,11 @@ jobs:
           bb: 'latest'
           clj-kondo: 'latest'
 
+      - name: Install Clojure CLI
+        run: |
+          curl -O https://download.clojure.org/install/linux-install-1.12.1.1550.sh
+          chmod +x linux-install-1.12.1.1550.sh
+          sudo ./linux-install-1.12.1.1550.sh
       - name: Install Trivy
         run: |
           sudo apt-get update
