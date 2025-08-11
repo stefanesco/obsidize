@@ -27,7 +27,6 @@ jobs:
           - os: macos-14
             name: macOS (arm64)
             arch: arm64
-
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -70,11 +69,14 @@ jobs:
           clj-kondo: 'latest'
 
       - name: Install Clojure CLI
-        if: runner.os == 'Linux'
         run: |
-          curl -O https://download.clojure.org/install/linux-install-1.12.1.1550.sh
-          chmod +x linux-install-1.12.1.1550.sh
-          sudo ./linux-install-1.12.1.1550.sh
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            curl -O https://download.clojure.org/install/linux-install-1.12.1.1550.sh
+            chmod +x linux-install-1.12.1.1550.sh
+            sudo ./linux-install-1.12.1.1550.sh
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            brew install clojure/tools/clojure
+          fi
 
       - name: Install Trivy
         if: runner.os == 'Linux'
@@ -88,7 +90,7 @@ jobs:
       - name: Build native executable
         run: bb package
 
-      - name: Prepare Release Artifacts (Linux/macOS)
+      - name: Prepare Release Artifacts
         run: |
           mv obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
           tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
@@ -100,7 +102,6 @@ jobs:
           name: release-assets-${{ matrix.arch }}-${{ runner.os }}
           path: |
             obsidize-*.tar.gz
-            obsidize-*.zip
             SHA256-*
 
   release:
@@ -120,7 +121,6 @@ jobs:
         with:
           files: |
             obsidize-*.tar.gz
-            obsidize-*.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
