@@ -19,6 +19,7 @@ jobs:
         uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: 'latest'
+          clj-kondo: 'latest'
       - name: Install Clojure CLI
         run: |
           curl -O https://download.clojure.org/install/linux-install-1.12.1.1550.sh
