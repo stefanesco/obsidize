@@ -79,20 +79,24 @@ jobs:
           fi
 
       - name: Install Trivy
-        if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update && sudo apt-get install -y trivy
+          if [[ "${{ runner.os }}" == "Linux" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y wget gnupg
+            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+            echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+            sudo apt-get update && sudo apt-get install -y trivy
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            brew install aquasecurity/trivy/trivy
+          fi
 
       - name: Build native executable
         run: bb package
 
       - name: Prepare Release Artifacts
         run: |
-          mv obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
+          RELEASE_DIR=$(find target/release -type d -name "0.1.*")
+          mv $RELEASE_DIR/obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
           tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
           shasum -a 256 obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz | awk '{print $1}' > SHA256-${{ matrix.arch }}-${{ runner.os }}
 
