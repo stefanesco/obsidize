@@ -6,16 +6,8 @@ on:
   pull_request:
 
 jobs:
-  trivy-scan:
-    uses: ./.github/workflows/trivy.yml
-    with:
-      scan-path: "."
-
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # Required for Workload Identity Federation
     steps:
       - uses: actions/checkout@v4
       - name: Prepare java
@@ -27,11 +19,12 @@ jobs:
         uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: 'latest'
-      - name: Run Tests
-        run: bb test
-      - name: Run Lint
-        run: bb lint
-      - name: Run Audit
-        run: bb audit-vulns-clj
-      - name: Docker Build
-        run: bb docker-build
+      - name: Install Trivy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update && sudo apt-get install -y trivy
+      - name: Run CI pipeline
+        run: bb ci
