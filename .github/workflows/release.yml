@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run in dry-run mode (skips actual release and push to Homebrew)'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   build-release:
@@ -117,6 +124,7 @@ jobs:
           merge-multiple: true
 
       - name: Create GitHub Release
+        if: github.event_name != 'workflow_dispatch' || !github.event.inputs.dry-run
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -140,13 +148,10 @@ jobs:
       - name: Set up environment for formula
         id: formula-env
         run: |
-          echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+          echo "VERSION=${{ github.ref_name || 'v0.0.0-test' }}" >> $GITHUB_ENV
           echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "ARM64_SHA=$(cat SHA256-arm64-macos-14)" >> $GITHUB_ENV
           echo "AMD64_SHA=$(cat SHA256-amd64-macos-13)" >> $GITHUB_ENV
-
-      - name: Clone Homebrew tap
-        run: git clone https://github.com/${{ vars.HOMEBREW_TAP_REPO }} tap
 
       - name: Generate formula from template
         working-directory: tap
@@ -181,6 +186,7 @@ jobs:
           envsubst < template.rb > Formula/obsidize.rb
 
       - name: Commit & push tap
+        if: github.event_name != 'workflow_dispatch' || !github.event.inputs.dry-run
         working-directory: tap
         env:
           GIT_AUTHOR_NAME: github-actions
@@ -192,5 +198,5 @@ jobs:
           git config --global user.name "${GIT_AUTHOR_NAME}"
           git config --global user.email "${GIT_AUTHOR_EMAIL}"
           git add Formula/obsidize.rb
-          git commit -m "Update Obsidize formula to ${{ github.ref_name }}" || echo "No changes"
+          git commit -m "Update Obsidize formula to ${{ github.ref_name || 'v0.0.0-test' }}" || echo "No changes"
           git push https://x-access-token:${TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }} HEAD:main
