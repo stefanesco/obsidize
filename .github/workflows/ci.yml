@@ -10,21 +10,42 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache Clojure dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.clojure
+          key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-clojure-
+
+      - name: Get weekly cache key
+        id: weekly-key
+        run: echo "key=$(date -u +'%Y-W%V')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Trivy DB
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: ${{ runner.os }}-trivy-${{ steps.weekly-key.outputs.key }}
+          restore-keys: |
+            ${{ runner.os }}-trivy-
+
       - name: Prepare java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '21'
+
       - name: Setup Clojure
         uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: 'latest'
           clj-kondo: 'latest'
-      - name: Install Clojure CLI
-        run: |
-          curl -O https://download.clojure.org/install/linux-install-1.12.1.1550.sh
-          chmod +x linux-install-1.12.1.1550.sh
-          sudo ./linux-install-1.12.1.1550.sh
+
       - name: Install Trivy
         run: |
           sudo apt-get update
@@ -32,5 +53,6 @@ jobs:
           wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
           echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
           sudo apt-get update && sudo apt-get install -y trivy
+
       - name: Run CI pipeline
         run: bb ci
