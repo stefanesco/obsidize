@@ -1,0 +1,152 @@
+{:deps {;; For parsing JSON reports from tools like Trivy
+        cheshire/cheshire {:mvn/version "6.0.0"}}
+
+ :tasks
+ {:requires ([babashka.process :refer [shell]]
+             [babashka.fs :as fs]
+             [cheshire.core :as json]
+             [clojure.string :as str])
+
+  ;; ---
+  ;; UTILITY TASKS
+  ;; ---
+  clean
+  {:doc "Clean up generated files and artifacts."
+   :task (do (println "🧹 Cleaning up generated files...")
+             (shell "rm -rf target trivy-report.json test-output/")
+             (println "✅ Cleanup complete."))}
+
+  ;; ---
+  ;; SETUP & INSTALLATION
+  ;; ---
+  init
+  {:doc "Install all project dependencies (Clojure)."
+   :task (do (println "🔧 Initializing project and installing dependencies...")
+             (shell "clojure -P") ; Prepares/downloads Clojure deps
+             (println "✅ Dependencies installed."))}
+
+  ;; ---
+  ;; LINTING TASKS
+  ;; ---
+  lint
+  {:doc "Lint Clojure source code with clj-kondo (warnings non-blocking)."
+   :task (try
+           (shell "clj-kondo --lint src test")
+           (println "✅ Clojure linting passed with no errors.")
+           (catch Exception e
+             (let [exit-code (:exit (ex-data e))]
+               (if (= exit-code 2)
+                 (println "⚠️  Clojure linting completed with warnings (non-blocking).")
+                 (throw e)))))}
+
+
+  ;; ---
+  ;; TESTING TASKS
+  ;; ---
+  test
+  {:doc "Run Clojure tests with Kaocha and generate a coverage report."
+   :task (shell "clojure -M:test")}
+  
+  ;; ---
+  ;; AUDITING & SECURITY TASKS
+  ;; ---
+  audit
+  {:doc "Check for outdated Clojure dependencies with antq."
+   :task (shell "clojure -M:antq")}
+
+  check-trivy
+  {:doc "Check if Trivy is installed and available on the PATH."
+   :task (when-not (fs/which "trivy")
+           (println "❌ Trivy is not installed or not in your PATH.")
+           (println "   Please install it to run security scans (e.g., 'brew install aquasecurity/trivy/trivy').")
+           (System/exit 1))}
+
+  generate-pom
+  {:doc "Generate pom.xml from deps.edn for vulnerability scanning."
+   :task (shell "clojure -A:test -Spom > target/pom.xml")}
+
+  trivy-scan
+  {:doc "Run Trivy to scan for vulns and licenses, generating a report."
+   :depends [generate-pom check-trivy]
+   ;; We remove --exit-code so this task always passes and generates a report.
+   ;; The check task below is responsible for failing the build.
+   :task (shell {:extra-env {"TRIVY_SKIP_CLIENT_DOCKER_CREDENTIALS" "true"
+                             "DOCKER_CONFIG" ""}}
+                "trivy fs . --scanners vuln,license --format json -o target/trivy-report.json --severity HIGH,CRITICAL")}
+
+  trivy-check
+  {:doc "Parse Trivy report for vulnerabilities and license issues, then fail if needed."
+   :depends [trivy-scan]
+   :task
+   (let [report (-> "target/trivy-report.json" slurp (json/parse-string true))
+         results (get-in report [:Results] [])
+         disallowed-licenses #{}
+
+         ;; Find all high/critical vulnerabilities across all results
+         vuln-issues (->> results
+                          (mapcat :Vulnerabilities)
+                          (filter (fn [x] (some? x))) ; Filter out nil entries
+                          (filter (fn [x] (contains? #{"HIGH" "CRITICAL"} (:Severity x)))))
+
+         ;; Find all packages with disallowed licenses
+         license-issues (->> results
+                             (mapcat :Packages)
+                             (filter (fn [x] (some? x))) ; Filter out nil entries
+                             (filter (fn [pkg] (some disallowed-licenses (:Licenses pkg)))))]
+
+     (if (and (empty? vuln-issues) (empty? license-issues))
+       (println "✅ Trivy scan passed: No critical vulnerabilities or disallowed licenses found.")
+       (do
+         (println "---")
+         (when (not-empty vuln-issues)
+           (println "❌ Found HIGH/CRITICAL vulnerabilities:")
+           (doseq [{:keys [PkgName VulnerabilityID Severity]} vuln-issues]
+             (println (format "  - %s: [%s] %s" PkgName Severity VulnerabilityID))))
+
+         (when (not-empty license-issues)
+           (println "\n❌ Found packages with disallowed licenses:")
+           (doseq [{:keys [Name Licenses]} license-issues]
+             (println (format "  - %s (License: %s)" Name (str/join ", " Licenses)))))
+
+         (println "\n Failing build due to security/license issues.")
+         (System/exit 1))))}
+
+  verify
+  {:doc "Run all security and dependency audits."
+   :depends [audit trivy-check]}
+
+  ;; ---
+  ;; BUILD & CI TASKS
+  ;; ---
+  check
+  {:doc "Run all checks: lint, test, and audit."
+   :depends [lint test verify]}
+
+  ci
+  {:doc "Run the full CI pipeline: install dependencies and run all checks."
+   :depends [init lint test verify]}
+
+  ;; ---
+  ;; PACKAGING & RELEASE TASKS
+  ;; ---
+  uberjar
+  {:doc "Build a standalone uberjar of the application."
+   :override-builtin true
+   :task (shell "clojure -T:build uber")}
+
+  native-prereqs
+  {:doc "Check for GraalVM native-image prerequisites."
+   :task (when-not (fs/which "native-image")
+           (println "❌ GraalVM 'native-image' command not found.")
+           (println "   Please install GraalVM and configure your PATH.")
+           (println "   See: https://www.graalvm.org/latest/reference-manual/native-image/#install-native-image")
+           (System/exit 1))}
+
+  native-image
+  {:doc "Build a native executable using GraalVM."
+   :depends [native-prereqs]
+   :task (shell "clojure -T:build native-image")}
+
+  package
+  {:doc "Run the full packaging pipeline to create a native executable."
+   :depends [clean ci uberjar native-image]}}}
