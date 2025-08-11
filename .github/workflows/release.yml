@@ -27,9 +27,7 @@ jobs:
           - os: macos-14
             name: macOS (arm64)
             arch: arm64
-          - os: windows-latest
-            name: Windows (amd64)
-            arch: amd64
+
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -91,17 +89,10 @@ jobs:
         run: bb package
 
       - name: Prepare Release Artifacts (Linux/macOS)
-        if: runner.os != 'Windows'
         run: |
           mv obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
           tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
           shasum -a 256 obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz | awk '{print $1}' > SHA256-${{ matrix.arch }}-${{ runner.os }}
-
-      - name: Prepare Release Artifacts (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          mv obsidize.exe obsidize-${{ matrix.arch }}-${{ runner.os }}.exe
-          7z a obsidize-${{ matrix.arch }}-${{ runner.os }}.zip obsidize-${{ matrix.arch }}-${{ runner.os }}.exe
 
       - name: Upload Release Assets
         uses: actions/upload-artifact@v4
