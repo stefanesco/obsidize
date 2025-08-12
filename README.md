@@ -524,22 +524,6 @@ bb check         # Full CI pipeline
 - **End-to-end tests**: Full workflow scenario testing
 - **Performance tests**: Large dataset and memory usage testing
 
-## 📝 License
-
-GNU Affero General Public License v3.0
-
-Copyright (c) 2025 Tudor Stefanescu
-
-### License Summary
-
-- ✅ **Use freely** for personal projects, internal business tools, and development
-- ✅ **Modify and distribute** - improvements and forks are welcome  
-- ✅ **Commercial use** - businesses can use this internally without restrictions
-- ⚠️ **Network copyleft** - if you offer this as a service to others, you must open source your entire service stack
-- 📤 **Share improvements** - modifications must be shared under the same license
-
-This license ensures the project remains open source while preventing commercial exploitation without contribution back to the community.
-
 ## Build and Release
 
 This project uses GitHub Actions for CI/CD. There are two main pipelines: the CI pipeline and the Release pipeline.
@@ -550,30 +534,30 @@ The CI pipeline runs on every push to the `main` branch and on every pull reques
 
 ```mermaid
 graph TD
-    A[Push to main] --> B{CI Pipeline};
-    C[Pull Request] --> B;
-    B --> D[Build Job on ubuntu-latest];
-    D --> E[Setup Environment];
-    E --> F[Run 'bb ci'];
-    F --> G{Run all checks};
-    G --> H[Lint];
-G --> I[Test];
-    G --> J[Verify];
-    J --> K[Audit Dependencies (Linux only)];
-    J --> L[Scan for Vulnerabilities (Linux only)];
+    A[Push to main] --> B{CI Pipeline}
+    C[Pull Request] --> B
+    B --> D[Build Job on ubuntu-latest]
+    D --> E[Setup Environment]
+    E --> F[Run 'bb ci']
+    F --> G{Run all checks}
+    G --> H[Lint]
+G --> I[Test]
+    G --> J[Verify]
+    J --> K[Audit Dependencies (antq - Linux only)]
+    J --> L[Scan for Vulnerabilities (trivy - Linux only)]
 ```
 
 **Stages:**
 
-1.  **Trigger:** The pipeline is triggered by a push to `main` or a pull request.
-2.  **Build Job:** A single job runs on an `ubuntu-latest` runner.
-3.  **Setup Environment:** The job checks out the code, sets up caches, Java, Clojure, and other dependencies.
-4.  **Run Checks:** The job executes the `bb ci` command, which runs all the necessary checks:
-    *   **Lint:** Lints the Clojure code using `clj-kondo`.
-    *   **Test:** Runs the test suite using `kaocha`.
-    *   **Verify:** Performs security-related checks:
-        *   **Audit Dependencies:** Checks for outdated dependencies using `antq`. This step only runs on Linux.
-        *   **Scan for Vulnerabilities:** Scans for vulnerabilities in the dependencies using `trivy`. This step also only runs on Linux.
+1. **Trigger:** The pipeline is triggered by a push to `main` or a pull request.
+2. **Build Job:** A single job runs on an `ubuntu-latest` runner.
+3. **Setup Environment:** The job checks out the code, sets up caches, Java, Clojure, and other dependencies.
+4. **Run Checks:** The job executes the `bb ci` command, which runs all the necessary checks:
+  a. **Lint:** Lints the Clojure code using `clj-kondo`.
+  b. **Test:** Runs the test suite using `kaocha`.
+  c. **Verify:** Performs security-related checks:
+     i. **Audit Dependencies:** Checks for outdated dependencies using `antq`. This step only runs on Linux.
+     ii. **Scan for Vulnerabilities:** Scans for vulnerabilities in the dependencies using `trivy`. This step also only runs on Linux.
 
 ### Release Pipeline
 
@@ -602,31 +586,31 @@ graph TD
 
 **Stages:**
 
-1.  **Trigger:** The pipeline is triggered by a push of a tag that starts with `v`.
-2.  **Build Release Job:** This job runs on a matrix of operating systems (Linux, macOS amd64, macOS arm64). For each OS, it:
-    *   Sets up the environment with GraalVM.
-    *   Runs the `bb package` command, which builds the native executable. This command also runs all the CI checks.
-    *   Packages the executable into a `.tar.gz` archive and calculates its SHA256 hash.
-    *   Uploads the archive and the SHA256 hash as artifacts.
-3.  **Release Job:** This job runs after all the build jobs are complete. It:
-    *   Downloads all the release artifacts.
-    *   Creates a new GitHub Release and attaches all the archives to it.
-4.  **Update Homebrew Tap Job:** This job runs after the release is created. It:
-    *   Downloads the release artifacts.
-    *   Generates a new Homebrew formula with the updated version and SHA256 hashes.
-    *   Pushes the new formula to the Homebrew tap repository.
+1. **Trigger:** The pipeline is triggered by a push of a tag that starts with `v`.
+2. **Build Release Job:** This job runs on a matrix of operating systems (Linux, macOS amd64, macOS arm64). For each OS, it:
+   a. Sets up the environment with GraalVM.
+   b. Runs the `bb package` command, which builds the native executable. This command also runs all the CI checks.
+   c. Packages the executable into a `.tar.gz` archive and calculates its SHA256 hash.
+   d. Uploads the archive and the SHA256 hash as artifacts.
+3. **Release Job:** This job runs after all the build jobs are complete. It:
+    a. Downloads all the release artifacts.
+    b. Creates a new GitHub Release and attaches all the archives to it.
+4. **Update Homebrew Tap Job:** This job runs after the release is created. It:
+    a. Downloads the release artifacts.
+    b. Generates a new Homebrew formula with the updated version and SHA256 hashes.
+    c. Pushes the new formula to the Homebrew tap repository.
 
 **Gates:**
 
-*   The `release` job will only run if the `build-release` job completes successfully for all operating systems.
-*   The `update-homebrew` job will only run if the `release` job completes successfully.
-*   The actual release to GitHub and the push to the Homebrew tap are gated and will not run in "dry-run" mode.
+1. The `release` job will only run if the `build-release` job completes successfully for all operating systems.
+2. The `update-homebrew` job will only run if the `release` job completes successfully.
+3. The actual release to GitHub and the push to the Homebrew tap are gated and will not run in "dry-run" mode.
 
 **Targets:**
 
-*   The final targets of the pipeline are:
-    *   A new GitHub Release with the native executables for Linux and macOS.
-    *   An updated Homebrew formula for easy installation on macOS.
+- The final targets of the pipeline are:
+  - A new GitHub Release with the native executables for Linux and macOS.
+  - An updated Homebrew formula for easy installation on macOS.
 
 ### Testing the Release Pipeline
 
@@ -634,11 +618,27 @@ The release pipeline can be tested without creating a real release by using the 
 
 To test the release pipeline:
 
-1.  Go to the **Actions** tab in your GitHub repository.
-2.  In the left sidebar, click on the **"Create Release"** workflow.
-3.  You will see a **"Run workflow"** button. Click on it.
-4.  A dialog will appear with the following options:
-    *   **Version:** The version to use for the test run (e.g., `v0.0.0-test`). This allows you to test the versioning logic without creating a real git tag.
-    *   **Dry-run:** If checked (the default), the workflow will run all the build and packaging steps but will skip the final steps of creating the GitHub Release and pushing to the Homebrew tap.
+1. Go to the **Actions** tab in your GitHub repository.
+2. In the left sidebar, click on the **"Create Release"** workflow.
+3. You will see a **"Run workflow"** button. Click on it.
+4. A dialog will appear with the following options:
+    - **Version:** The version to use for the test run (e.g., `v0.0.0-test`). This allows you to test the versioning logic without creating a real git tag.
+    - **Dry-run:** If checked (the default), the workflow will run all the build and packaging steps but will skip the final steps of creating the GitHub Release and pushing to the Homebrew tap.
 
 This is a safe and effective way to test any changes to the release process.
+
+## 📝 License
+
+GNU Affero General Public License v3.0
+
+Copyright (c) 2025 Tudor Stefanescu
+
+### License Summary
+
+- ✅ **Use freely** for personal projects, internal business tools, and development
+- ✅ **Modify and distribute** - improvements and forks are welcome  
+- ✅ **Commercial use** - businesses can use this internally without restrictions
+- ⚠️ **Network copyleft** - if you offer this as a service to others, you must open source your entire service stack
+- 📤 **Share improvements** - modifications must be shared under the same license
+
+This license ensures the project remains open source while preventing commercial exploitation without contribution back to the community.

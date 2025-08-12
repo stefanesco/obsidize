@@ -101,6 +101,9 @@ jobs:
       - name: Build native executable
         run: bb package
 
+      - name: List target directory
+        run: ls -R target
+
       - name: Prepare Release Artifacts
         run: |
           VERSION="$(echo $RELEASE_VERSION | sed 's/v//')"
