@@ -90,12 +90,16 @@ jobs:
             brew install aquasecurity/trivy/trivy
           fi
 
+      - name: Set Release Version Env
+        run: echo "RELEASE_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+
       - name: Build native executable
         run: bb package
 
       - name: Prepare Release Artifacts
         run: |
-          RELEASE_DIR=$(find target/release -type d -name "0.1.*")
+          VERSION="${{ env.RELEASE_VERSION#v }}"
+          RELEASE_DIR="target/release/$VERSION"
           mv $RELEASE_DIR/obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
           tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
           shasum -a 256 obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz | awk '{print $1}' > SHA256-${{ matrix.arch }}-${{ runner.os }}
@@ -143,7 +147,9 @@ jobs:
       - name: Set up environment for formula
         id: formula-env
         run: |
-          echo "VERSION=${{ github.ref_name || 'v0.0.0-test' }}" >> $GITHUB_ENV
+          TAG_NAME=${{ github.ref_name || 'v0.0.0-test' }}
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "VERSION=${TAG_NAME#v}" >> $GITHUB_ENV
           echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "ARM64_SHA=$(cat SHA256-arm64-macos-14)" >> $GITHUB_ENV
           echo "AMD64_SHA=$(cat SHA256-amd64-macos-13)" >> $GITHUB_ENV
@@ -159,11 +165,11 @@ jobs:
 
             on_macos do
               on_arm do
-                url "https://github.com/$REPO/releases/download/$VERSION/obsidize-arm64-macos-14.tar.gz"
+                url "https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-arm64-macos-14.tar.gz"
                 sha256 "$ARM64_SHA"
               end
               on_intel do
-                url "https://github.com/$REPO/releases/download/$VERSION/obsidize-amd64-macos-13.tar.gz"
+                url "https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-macos-13.tar.gz"
                 sha256 "$AMD64_SHA"
               end
             end
@@ -193,5 +199,5 @@ jobs:
           git config --global user.name "${GIT_AUTHOR_NAME}"
           git config --global user.email "${GIT_AUTHOR_EMAIL}"
           git add Formula/obsidize.rb
-          git commit -m "Update Obsidize formula to ${{ github.ref_name || 'v0.0.0-test' }}" || echo "No changes"
+          git commit -m "Update Obsidize formula to ${{ env.TAG_NAME }}" || echo "No changes"
           git push https://x-access-token:${TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }} HEAD:main

@@ -3,7 +3,9 @@
             [clojure.java.io :as io]))
 
 (def lib 'stefanesco/obsidize)
-(def version (format "0.1.%s" (b/git-count-revs nil)))
+(def version (if-let [tag (System/getenv "RELEASE_VERSION")]
+               (if (str/starts-with? tag "v") (subs tag 1) tag)
+               (format "0.1.%s" (b/git-count-revs nil))))
 (def class-dir "target/classes")
 (def release-dir (format "target/release/%s" version))
 (def basis (b/create-basis {:project "deps.edn"}))
