@@ -543,8 +543,8 @@ graph TD
     G --> H[Lint]
 G --> I[Test]
     G --> J[Verify]
-    J --> K[Audit Dependencies (antq - Linux only)]
-    J --> L[Scan for Vulnerabilities (trivy - Linux only)]
+    J --> K[Audit Dependencies using antq - on Linux only]
+    J --> L[Scan for Vulnerabilities using trivy - on Linux only]
 ```
 
 **Stages:**
