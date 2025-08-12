@@ -6,6 +6,11 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
+      version:
+        description: 'The version to use for the test run (e.g., v0.0.0-test)'
+        required: true
+        type: string
+        default: 'v0.0.0-test'
       dry-run:
         description: 'Run in dry-run mode (skips actual release and push to Homebrew)'
         required: true
@@ -30,7 +35,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Cache Clojure dependencies
         uses: actions/cache@v4
@@ -91,14 +96,14 @@ jobs:
           fi
 
       - name: Set Release Version Env
-        run: echo "RELEASE_VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+        run: echo "RELEASE_VERSION=${{ github.event.inputs.version || github.ref_name }}" >> $GITHUB_ENV
 
       - name: Build native executable
         run: bb package
 
       - name: Prepare Release Artifacts
         run: |
-          VERSION="${{ env.RELEASE_VERSION }}#v"
+          VERSION="$(echo $RELEASE_VERSION | sed 's/v//')"
           RELEASE_DIR="target/release/$VERSION"
           mv $RELEASE_DIR/obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
           tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
@@ -118,7 +123,7 @@ jobs:
     needs: build-release
     steps:
       - name: Download all release assets
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           pattern: release-assets-*
           merge-multiple: true
@@ -139,7 +144,7 @@ jobs:
     needs: release
     steps:
       - name: Download all release assets
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           pattern: release-assets-*
           merge-multiple: true
@@ -147,9 +152,9 @@ jobs:
       - name: Set up environment for formula
         id: formula-env
         run: |
-          TAG_NAME=${{ github.ref_name || 'v0.0.0-test' }}
+          TAG_NAME=${{ github.event.inputs.version || github.ref_name }}
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "VERSION=${TAG_NAME}#v" >> $GITHUB_ENV
+          echo "VERSION=$(echo $TAG_NAME | sed 's/v//')" >> $GITHUB_ENV
           echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "ARM64_SHA=$(cat SHA256-arm64-macos-14)" >> $GITHUB_ENV
           echo "AMD64_SHA=$(cat SHA256-amd64-macos-13)" >> $GITHUB_ENV
@@ -199,5 +204,5 @@ jobs:
           git config --global user.name "${GIT_AUTHOR_NAME}"
           git config --global user.email "${GIT_AUTHOR_EMAIL}"
           git add Formula/obsidize.rb
-          git commit -m "Update Obsidize formula to ${{ env.TAG_NAME }}" || echo "No changes"
+          git commit -m "Update Obsidize formula to $TAG_NAME" || echo "No changes"
           git push https://x-access-token:${TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }} HEAD:main

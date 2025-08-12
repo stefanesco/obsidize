@@ -20,7 +20,7 @@ Obsidize makes it seamless to import and maintain your Claude conversation histo
 
 ### Prerequisites
 
-- [Clojure CLI](https://clojure.org/guides/install_clojure) (required)
+- [Clojure CLI](https://clojure.org/guides/install_clojure)
 - [Babashka](https://babashka.org/) (optional, for development tasks)
 
 ### Basic Usage
@@ -436,6 +436,7 @@ Examples:
 ### Common Issues
 
 **"Input file must exist"**
+
 ```bash
 # Check file path and permissions
 ls -la path/to/your-export.dms
@@ -443,24 +444,28 @@ file your-export.dms  # Should show "Zip archive data"
 ```
 
 **"Missing required files"**
+
 ```bash
 # Check data pack contents
-unzip -l your-export.dms | grep -E "(conversations|projects)\.json"
+unzip -l your-export.dms | grep -E "(conversations|projects)\\.json"
 ```
 
 **Slow processing on large vaults**
+
 ```bash
 # Use incremental mode (default) instead of --force-full
 obsidize --input new-export.dms --output-dir large-vault/
 ```
 
 **Updates not detected**
+
 ```bash
 # Check frontmatter in existing files
 head -10 vault/some-conversation.md  # Should show obsidized_at timestamp
 ```
 
 **Permission denied errors**
+
 ```bash
 # Ensure write permissions to output directory
 chmod 755 /path/to/output-directory
@@ -471,6 +476,7 @@ obsidize --input export.dms --output-dir ~/Documents/my-vault/
 ### Advanced Troubleshooting
 
 **Debug mode with maximum verbosity:**
+
 ```bash
 clojure -M -m obsidize.core \
   --input problematic-export.dms \
@@ -480,6 +486,7 @@ clojure -M -m obsidize.core \
 ```
 
 **Manual data pack inspection:**
+
 ```bash
 # Extract .dms file manually
 unzip problematic-export.dms -d extracted-data/
@@ -490,6 +497,7 @@ head -50 extracted-data/projects.json
 ```
 
 **Verify setup:**
+
 ```bash
 # Test with sample data
 clojure -M -m obsidize.core \
@@ -499,48 +507,9 @@ clojure -M -m obsidize.core \
   --verbose
 ```
 
-## 🚧 Roadmap
-
-### Recently Completed ✅
-- **Filesystem-based incremental updates** - Smart detection using vault frontmatter
-- **Message appending** - Append new messages to existing conversations  
-- **Robust data validation** - Graceful handling of malformed Claude exports
-- **Comprehensive CLI** - Dry run, force-full, verbose modes
-- **Advanced progress reporting** - Clear feedback on processing status
-
-### Next Steps (Priority Order)
-
-#### Phase 1: Enhanced Project Handling
-- **Project document updates**: Handle new documents added to existing projects
-- **Project metadata sync**: Update project descriptions and metadata
-- **Document reordering**: Handle changes in document chronology
-
-#### Phase 2: Advanced Configuration
-- **Configuration files**: User-configurable templates, naming patterns, output formats
-- **Custom templates**: Pluggable markdown templates for different content types
-- **Filtering options**: Skip certain conversation types, date ranges, or content patterns
-
-#### Phase 3: Performance & Scale
-- **Concurrent processing**: Parallel processing for large datasets
-- **Memory optimization**: Streaming processing for very large exports
-- **Progress persistence**: Resume interrupted imports from where they left off
-
-#### Phase 4: Advanced Features
-- **Content analysis**: Auto-generate tags based on conversation content
-- **Cross-linking**: Automatic links between related conversations and projects  
-- **Export formats**: Support for other note-taking systems beyond Obsidian
-- **Backup & rollback**: Safety features for production use
-
-## 🤝 Contributing
-
-We welcome contributions! The codebase follows functional programming principles:
-
-- **Pure Functions**: Data transformation logic is pure and testable
-- **Comprehensive Tests**: 65+ test assertions covering all functionality
-- **Clear Error Messages**: Detailed feedback for troubleshooting and debugging
-- **REPL-Friendly**: Interactive development and debugging workflow
 
 ### Development Workflow
+
 ```bash
 bb init          # Setup dependencies
 bb test:clj      # Run tests (should show 65+ assertions)
@@ -549,6 +518,7 @@ bb check         # Full CI pipeline
 ```
 
 ### Test Categories
+
 - **Unit tests**: Pure function testing with edge cases
 - **Integration tests**: Component interaction testing
 - **End-to-end tests**: Full workflow scenario testing
@@ -569,3 +539,106 @@ Copyright (c) 2025 Tudor Stefanescu
 - 📤 **Share improvements** - modifications must be shared under the same license
 
 This license ensures the project remains open source while preventing commercial exploitation without contribution back to the community.
+
+## Build and Release
+
+This project uses GitHub Actions for CI/CD. There are two main pipelines: the CI pipeline and the Release pipeline.
+
+### CI Pipeline
+
+The CI pipeline runs on every push to the `main` branch and on every pull request. It ensures that the code is always in a good state.
+
+```mermaid
+graph TD
+    A[Push to main] --> B{CI Pipeline};
+    C[Pull Request] --> B;
+    B --> D[Build Job on ubuntu-latest];
+    D --> E[Setup Environment];
+    E --> F[Run 'bb ci'];
+    F --> G{Run all checks};
+    G --> H[Lint];
+G --> I[Test];
+    G --> J[Verify];
+    J --> K[Audit Dependencies (Linux only)];
+    J --> L[Scan for Vulnerabilities (Linux only)];
+```
+
+**Stages:**
+
+1.  **Trigger:** The pipeline is triggered by a push to `main` or a pull request.
+2.  **Build Job:** A single job runs on an `ubuntu-latest` runner.
+3.  **Setup Environment:** The job checks out the code, sets up caches, Java, Clojure, and other dependencies.
+4.  **Run Checks:** The job executes the `bb ci` command, which runs all the necessary checks:
+    *   **Lint:** Lints the Clojure code using `clj-kondo`.
+    *   **Test:** Runs the test suite using `kaocha`.
+    *   **Verify:** Performs security-related checks:
+        *   **Audit Dependencies:** Checks for outdated dependencies using `antq`. This step only runs on Linux.
+        *   **Scan for Vulnerabilities:** Scans for vulnerabilities in the dependencies using `trivy`. This step also only runs on Linux.
+
+### Release Pipeline
+
+The Release pipeline runs when a new tag is pushed to the repository (e.g., `v0.1.0`). It builds the native executables for Linux and macOS, creates a GitHub Release, and publishes the new version to a Homebrew tap.
+
+This pipeline can also be triggered manually from the GitHub Actions UI for testing purposes (in "dry-run" mode).
+
+```mermaid
+graph TD
+    A[Push tag v*.*.*] --> B{Release Pipeline};
+    B --> C[Build Release Job];
+    C --> D[Matrix: Linux, macOS amd64, macOS arm64];
+    D --> E{For each OS};
+    E --> F[Setup Environment];
+    F --> G[Run 'bb package'];
+    G --> H[Package Artifacts];
+    H --> I[Upload Artifacts];
+    I --> J[Release Job];
+    J --> K[Download Artifacts];
+    K --> L[Create GitHub Release];
+    L --> M[Update Homebrew Tap Job];
+    M --> N[Download Artifacts];
+    N --> O[Generate Formula];
+    O --> P[Push to Homebrew Tap];
+```
+
+**Stages:**
+
+1.  **Trigger:** The pipeline is triggered by a push of a tag that starts with `v`.
+2.  **Build Release Job:** This job runs on a matrix of operating systems (Linux, macOS amd64, macOS arm64). For each OS, it:
+    *   Sets up the environment with GraalVM.
+    *   Runs the `bb package` command, which builds the native executable. This command also runs all the CI checks.
+    *   Packages the executable into a `.tar.gz` archive and calculates its SHA256 hash.
+    *   Uploads the archive and the SHA256 hash as artifacts.
+3.  **Release Job:** This job runs after all the build jobs are complete. It:
+    *   Downloads all the release artifacts.
+    *   Creates a new GitHub Release and attaches all the archives to it.
+4.  **Update Homebrew Tap Job:** This job runs after the release is created. It:
+    *   Downloads the release artifacts.
+    *   Generates a new Homebrew formula with the updated version and SHA256 hashes.
+    *   Pushes the new formula to the Homebrew tap repository.
+
+**Gates:**
+
+*   The `release` job will only run if the `build-release` job completes successfully for all operating systems.
+*   The `update-homebrew` job will only run if the `release` job completes successfully.
+*   The actual release to GitHub and the push to the Homebrew tap are gated and will not run in "dry-run" mode.
+
+**Targets:**
+
+*   The final targets of the pipeline are:
+    *   A new GitHub Release with the native executables for Linux and macOS.
+    *   An updated Homebrew formula for easy installation on macOS.
+
+### Testing the Release Pipeline
+
+The release pipeline can be tested without creating a real release by using the `workflow_dispatch` trigger. This allows you to run the pipeline manually on any branch and inspect the results.
+
+To test the release pipeline:
+
+1.  Go to the **Actions** tab in your GitHub repository.
+2.  In the left sidebar, click on the **"Create Release"** workflow.
+3.  You will see a **"Run workflow"** button. Click on it.
+4.  A dialog will appear with the following options:
+    *   **Version:** The version to use for the test run (e.g., `v0.0.0-test`). This allows you to test the versioning logic without creating a real git tag.
+    *   **Dry-run:** If checked (the default), the workflow will run all the build and packaging steps but will skip the final steps of creating the GitHub Release and pushing to the Homebrew tap.
+
+This is a safe and effective way to test any changes to the release process.
