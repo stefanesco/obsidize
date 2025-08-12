@@ -67,5 +67,4 @@
                              "-march=native" ; Optimize for build machine's CPU
                              "--features=clj_easy.graal_build_time.InitClojureClasses" ; Modern flag for features
                              "--initialize-at-build-time=com.fasterxml.jackson.core"
-                             "--initialize-at-run-time=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"
-                             "--trace-class-initialization=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"]})) ; Initialize entire Jackson core package
+                             "--rerun-class-initialization-at-runtime=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"]})) ; Initialize entire Jackson core package
