@@ -51,8 +51,10 @@
   ;; AUDITING & SECURITY TASKS
   ;; ---
   audit
-  {:doc "Check for outdated Clojure dependencies with antq."
-   :task (shell "clojure -M:antq")}
+  {:doc "Check for outdated Clojure dependencies with antq (Linux only)."
+   :task (when (= "Linux" (System/getProperty "os.name"))
+           (println "🔬 Checking for outdated dependencies on Linux...")
+           (shell "clojure -M:antq"))}
 
   check-trivy
   {:doc "Check if Trivy is installed and available on the PATH."
