@@ -1,6 +1,7 @@
 (ns build
   (:require [clojure.tools.build.api :as b]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 (def lib 'stefanesco/obsidize)
 (def version (if-let [tag (System/getenv "RELEASE_VERSION")]
