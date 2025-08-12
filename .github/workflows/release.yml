@@ -100,10 +100,7 @@ jobs:
 
       - name: Build native executable
         run: bb package
-
-      - name: List target directory
-        run: ls -R target
-
+        
       - name: Prepare Release Artifacts
         run: |
           VERSION="$(echo $RELEASE_VERSION | sed 's/v//')"
@@ -132,7 +129,7 @@ jobs:
           merge-multiple: true
 
       - name: Create GitHub Release
-        if: github.event_name != 'workflow_dispatch' || !github.event.inputs.dry-run
+        if: github.event_name == 'push' || github.event.inputs.dry-run == 'false'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -159,8 +156,11 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "VERSION=$(echo $TAG_NAME | sed 's/v//')" >> $GITHUB_ENV
           echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
-          echo "ARM64_SHA=$(cat SHA256-arm64-macos-14)" >> $GITHUB_ENV
-          echo "AMD64_SHA=$(cat SHA256-amd64-macos-13)" >> $GITHUB_ENV
+          echo "ARM64_SHA=$(cat release-assets-arm64-macos-14/SHA256-arm64-macos-14)" >> $GITHUB_ENV
+          echo "AMD64_SHA=$(cat release-assets-amd64-macos-13/SHA256-amd64-macos-13)" >> $GITHUB_ENV
+
+      - name: Clone Homebrew tap
+        run: git clone https://github.com/${{ vars.HOMEBREW_TAP_REPO }} tap
 
       - name: Generate formula from template
         working-directory: tap
@@ -195,7 +195,7 @@ jobs:
           envsubst < template.rb > Formula/obsidize.rb
 
       - name: Commit & push tap
-        if: github.event_name != 'workflow_dispatch' || !github.event.inputs.dry-run
+        if: github.event_name == 'push' || github.event.inputs.dry-run == 'false'
         working-directory: tap
         env:
           GIT_AUTHOR_NAME: github-actions
