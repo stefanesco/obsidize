@@ -98,7 +98,7 @@ jobs:
 
       - name: Prepare Release Artifacts
         run: |
-          VERSION="${{ env.RELEASE_VERSION#v }}"
+          VERSION="${{ env.RELEASE_VERSION }}#v"
           RELEASE_DIR="target/release/$VERSION"
           mv $RELEASE_DIR/obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
           tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
@@ -149,7 +149,7 @@ jobs:
         run: |
           TAG_NAME=${{ github.ref_name || 'v0.0.0-test' }}
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "VERSION=${TAG_NAME#v}" >> $GITHUB_ENV
+          echo "VERSION=${TAG_NAME}#v" >> $GITHUB_ENV
           echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
           echo "ARM64_SHA=$(cat SHA256-arm64-macos-14)" >> $GITHUB_ENV
           echo "AMD64_SHA=$(cat SHA256-amd64-macos-13)" >> $GITHUB_ENV
