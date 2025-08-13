@@ -17,6 +17,14 @@ on:
         type: boolean
         default: true
 
+# Safer defaults for tokens and overlapping runs
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-release:
     name: Build ${{ matrix.name }}
@@ -35,7 +43,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Cache Clojure dependencies
         uses: actions/cache@v4
@@ -67,14 +75,16 @@ jobs:
           distribution: 'graalvm'
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Clojure
+      - name: Setup Clojure tools
         uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: 'latest'
           clj-kondo: 'latest'
 
       - name: Install Clojure CLI
+        shell: bash
         run: |
+          set -euo pipefail
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             curl -O https://download.clojure.org/install/linux-install-1.12.1.1550.sh
             chmod +x linux-install-1.12.1.1550.sh
@@ -84,12 +94,14 @@ jobs:
           fi
 
       - name: Install Trivy
+        shell: bash
         run: |
+          set -euo pipefail
           if [[ "${{ runner.os }}" == "Linux" ]]; then
             sudo apt-get update
-            sudo apt-get install -y wget gnupg
-            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-            echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+            sudo apt-get install -y wget gnupg lsb-release
+            wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+            echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
             sudo apt-get update && sudo apt-get install -y trivy
           elif [[ "${{ runner.os }}" == "macOS" ]]; then
             brew install aquasecurity/trivy/trivy
@@ -100,22 +112,33 @@ jobs:
 
       - name: Build native executable
         run: bb package
-        
+
       - name: Prepare Release Artifacts
+        shell: bash
         run: |
-          VERSION="$(echo $RELEASE_VERSION | sed 's/v//')"
+          set -euo pipefail
+          VERSION="$(echo "$RELEASE_VERSION" | sed 's/^v//')"
           RELEASE_DIR="target/release/$VERSION"
-          mv $RELEASE_DIR/obsidize obsidize-${{ matrix.arch }}-${{ runner.os }}
-          tar -czvf obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz obsidize-${{ matrix.arch }}-${{ runner.os }}
-          shasum -a 256 obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz | awk '{print $1}' > SHA256-${{ matrix.arch }}-${{ runner.os }}
+
+          # Ensure the packaged tarball contains a single executable named "obsidize"
+          STAGE_DIR="$(mktemp -d)"
+          install -m 0755 "$RELEASE_DIR/obsidize" "$STAGE_DIR/obsidize"
+
+          TAR_NAME="obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz"
+          tar -C "$STAGE_DIR" -czf "$TAR_NAME" obsidize
+
+          # Produce checksum matching the tarball name
+          shasum -a 256 "$TAR_NAME" | awk '{print $1}' > "SHA256-${{ matrix.arch }}-${{ runner.os }}"
 
       - name: Upload Release Assets
         uses: actions/upload-artifact@v4
         with:
           name: release-assets-${{ matrix.arch }}-${{ runner.os }}
           path: |
-            obsidize-*.tar.gz
-            SHA256-*
+            obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz
+            SHA256-${{ matrix.arch }}-${{ runner.os }}
+          if-no-files-found: error
+          retention-days: 7
 
   release:
     name: Create GitHub Release
@@ -129,7 +152,7 @@ jobs:
           merge-multiple: true
 
       - name: Create GitHub Release
-        if: github.event_name == 'push' || github.event.inputs.dry-run == 'false'
+        if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -142,70 +165,154 @@ jobs:
     name: Update Homebrew Tap
     runs-on: ubuntu-latest
     needs: release
+    if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
     steps:
-      - name: Download all release assets
+      - name: Download release assets (keep separated)
         uses: actions/download-artifact@v5
         with:
           pattern: release-assets-*
-          merge-multiple: true
+          merge-multiple: false
+          path: artifacts
 
-      - name: Set up environment for formula
+      - name: Prepare env and derive SHAs/URLs
         id: formula-env
+        shell: bash
         run: |
-          TAG_NAME=${{ github.event.inputs.version || github.ref_name }}
-          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
-          echo "VERSION=$(echo $TAG_NAME | sed 's/v//')" >> $GITHUB_ENV
-          echo "REPO=${{ github.repository }}" >> $GITHUB_ENV
-          echo "ARM64_SHA=$(cat release-assets-arm64-macos-14/SHA256-arm64-macos-14)" >> $GITHUB_ENV
-          echo "AMD64_SHA=$(cat release-assets-amd64-macos-13/SHA256-amd64-macos-13)" >> $GITHUB_ENV
+          set -euo pipefail
+
+          TAG_NAME="${{ github.event.inputs.version || github.ref_name }}"
+          VERSION="${TAG_NAME#v}"
+          REPO="${{ github.repository }}"
+          echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "REPO=$REPO" >> "$GITHUB_ENV"
+
+          echo "Artifacts tree:"; ls -R artifacts || true
+
+          ARM64_MAC_DIR="$(find artifacts -maxdepth 1 -type d -name 'release-assets-arm64-macOS' -print -quit || true)"
+          AMD64_MAC_DIR="$(find artifacts -maxdepth 1 -type d -name 'release-assets-amd64-macOS' -print -quit || true)"
+          if [[ -z "$ARM64_MAC_DIR" || -z "$AMD64_MAC_DIR" ]]; then
+            echo "Expected macOS artifacts not found. Found:"; find artifacts -maxdepth 1 -type d -print
+            exit 1
+          fi
+
+          ARM64_SHA_FILE="$ARM64_MAC_DIR/SHA256-arm64-macOS"
+          AMD64_SHA_FILE="$AMD64_MAC_DIR/SHA256-amd64-macOS"
+          [[ -f "$ARM64_SHA_FILE" ]] || { echo "Missing $ARM64_SHA_FILE"; exit 1; }
+          [[ -f "$AMD64_SHA_FILE" ]] || { echo "Missing $AMD64_SHA_FILE"; exit 1; }
+
+          ARM64_SHA="$(tr -d '[:space:]' < "$ARM64_SHA_FILE")"
+          AMD64_SHA="$(tr -d '[:space:]' < "$AMD64_SHA_FILE")"
+          echo "ARM64_SHA=$ARM64_SHA" >> "$GITHUB_ENV"
+          echo "AMD64_SHA=$AMD64_SHA" >> "$GITHUB_ENV"
+
+          # Optional Linux Homebrew support
+          LINUX_AMD_DIR="$(find artifacts -maxdepth 1 -type d -name 'release-assets-amd64-Linux' -print -quit || true)"
+          if [[ -n "$LINUX_AMD_DIR" && -f "$LINUX_AMD_DIR/SHA256-amd64-Linux" ]]; then
+            LINUX_AMD_SHA="$(tr -d '[:space:]' < "$LINUX_AMD_DIR/SHA256-amd64-Linux")"
+            echo "LINUX_AMD_SHA=$LINUX_AMD_SHA" >> "$GITHUB_ENV"
+          fi
+
+          echo "ARM64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-arm64-macOS.tar.gz" >> "$GITHUB_ENV"
+          echo "AMD64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-macOS.tar.gz" >> "$GITHUB_ENV"
+          echo "LINUX_AMD_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-Linux.tar.gz" >> "$GITHUB_ENV"
+
+          # Optional SPDX license (e.g., MIT, Apache-2.0). Set as a repo variable: vars.HOMEBREW_LICENSE
+          if [[ -n "${{ vars.HOMEBREW_LICENSE || '' }}" ]]; then
+            echo "HOMEBREW_LICENSE=${{ vars.HOMEBREW_LICENSE }}" >> "$GITHUB_ENV"
+          fi
 
       - name: Clone Homebrew tap
-        run: git clone https://github.com/${{ vars.HOMEBREW_TAP_REPO }} tap
-
-      - name: Generate formula from template
-        working-directory: tap
+        shell: bash
         run: |
-          cat > template.rb <<-'RUBY'
+          set -euo pipefail
+          : "${{ vars.HOMEBREW_TAP_REPO?vars.HOMEBREW_TAP_REPO is required}}"
+          git clone "https://github.com/${{ vars.HOMEBREW_TAP_REPO }}" tap
+
+      - name: Generate formula
+        shell: bash
+        working-directory: tap
+        env:
+          VERSION: ${{ env.VERSION }}
+          REPO: ${{ env.REPO }}
+          ARM64_SHA: ${{ env.ARM64_SHA }}
+          AMD64_SHA: ${{ env.AMD64_SHA }}
+          ARM64_URL: ${{ env.ARM64_URL }}
+          AMD64_URL: ${{ env.AMD64_URL }}
+          LINUX_AMD_SHA: ${{ env.LINUX_AMD_SHA }}
+          LINUX_AMD_URL: ${{ env.LINUX_AMD_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p Formula
+
+          cat > Formula/obsidize.rb <<'RUBY'
           class Obsidize < Formula
             desc "A simple Clojure CLI tool"
-            homepage "https://github.com/$REPO"
-            version "$VERSION"
+            homepage "https://github.com/REPO_PLACEHOLDER"
+            license "AGPL-3.0"
+            version "VERSION_PLACEHOLDER"
 
             on_macos do
               on_arm do
-                url "https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-arm64-macos-14.tar.gz"
-                sha256 "$ARM64_SHA"
+                url "ARM64_URL_PLACEHOLDER"
+                sha256 "ARM64_SHA_PLACEHOLDER"
               end
               on_intel do
-                url "https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-macos-13.tar.gz"
-                sha256 "$AMD64_SHA"
+                url "AMD64_URL_PLACEHOLDER"
+                sha256 "AMD64_SHA_PLACEHOLDER"
+              end
+            end
+
+            on_linux do
+              on_intel do
+                url "LINUX_AMD_URL_PLACEHOLDER"
+                sha256 "LINUX_AMD_SHA_PLACEHOLDER"
               end
             end
 
             def install
-              bin.install "obsidize-arm64-macos-14" => "obsidize"
+              bin.install "obsidize"
             end
 
             test do
-              output = shell_output("#{bin}/obsidize --help 2>&1", 0)
-              assert_match "obsidize", output
+              assert_match "obsidize", shell_output("#{bin}/obsidize --help")
             end
           end
           RUBY
-          envsubst < template.rb > Formula/obsidize.rb
+
+          sed -i.bak \
+            -e "s#REPO_PLACEHOLDER#${REPO}#g" \
+            -e "s#VERSION_PLACEHOLDER#${VERSION}#g" \
+            -e "s#ARM64_URL_PLACEHOLDER#${ARM64_URL}#g" \
+            -e "s#AMD64_URL_PLACEHOLDER#${AMD64_URL}#g" \
+            -e "s#ARM64_SHA_PLACEHOLDER#${ARM64_SHA}#g" \
+            -e "s#AMD64_SHA_PLACEHOLDER#${AMD64_SHA}#g" \
+            -e "s#LINUX_AMD_URL_PLACEHOLDER#${LINUX_AMD_URL:-https://example.invalid/disabled.tar.gz}#g" \
+            -e "s#LINUX_AMD_SHA_PLACEHOLDER#${LINUX_AMD_SHA:-d41d8cd98f00b204e9800998ecf8427e}#g" \
+            Formula/obsidize.rb
+          rm -f Formula/obsidize.rb.bak
+
+          if [[ -z "${LINUX_AMD_SHA:-}" ]]; then
+            awk '
+              /on_linux do/ {skip=1}
+              skip && /end/ && ++endcnt==2 {skip=0; next}
+              !skip
+            ' Formula/obsidize.rb > Formula/obsidize.rb.new && mv Formula/obsidize.rb.new Formula/obsidize.rb
+          fi
 
       - name: Commit & push tap
-        if: github.event_name == 'push' || github.event.inputs.dry-run == 'false'
         working-directory: tap
         env:
-          GIT_AUTHOR_NAME: github-actions
-          GIT_AUTHOR_EMAIL: actions@users.noreply.github.com
-          GIT_COMMITTER_NAME: github-actions
-          GIT_COMMITTER_EMAIL: actions@users.noreply.github.com
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        shell: bash
         run: |
-          git config --global user.name "${GIT_AUTHOR_NAME}"
-          git config --global user.email "${GIT_AUTHOR_EMAIL}"
+          set -euo pipefail
+          git config user.name "${GIT_AUTHOR_NAME}"
+          git config user.email "${GIT_AUTHOR_EMAIL}"
           git add Formula/obsidize.rb
-          git commit -m "Update Obsidize formula to $TAG_NAME" || echo "No changes"
-          git push https://x-access-token:${TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }} HEAD:main
+          git commit -m "Update Obsidize formula to ${VERSION}" || echo "No changes"
+          git push "https://x-access-token:${TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }}" HEAD:main
