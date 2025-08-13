@@ -218,11 +218,13 @@ jobs:
           echo "LINUX_AMD_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-Linux.tar.gz" >> "$GITHUB_ENV"
 
       - name: Clone Homebrew tap
+        env:
+          HOMEBREW_TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO }}
         shell: bash
         run: |
           set -euo pipefail
-          : "${{ vars.HOMEBREW_TAP_REPO?vars.HOMEBREW_TAP_REPO is required}}"
-          git clone "https://github.com/${{ vars.HOMEBREW_TAP_REPO }}" tap
+          : "${HOMEBREW_TAP_REPO:?HOMEBREW_TAP_REPO is required}"
+          git clone "https://github.com/${HOMEBREW_TAP_REPO}" tap
 
       - name: Generate formula
         shell: bash
@@ -303,11 +305,13 @@ jobs:
           GIT_COMMITTER_NAME: github-actions[bot]
           GIT_COMMITTER_EMAIL: github-actions[bot]@users.noreply.github.com
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          HOMEBREW_TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO }}
         shell: bash
         run: |
           set -euo pipefail
+          : "${HOMEBREW_TAP_REPO:?HOMEBREW_TAP_REPO is required}"
           git config user.name "${GIT_AUTHOR_NAME}"
           git config user.email "${GIT_AUTHOR_EMAIL}"
           git add Formula/obsidize.rb
           git commit -m "Update Obsidize formula to ${VERSION}" || echo "No changes"
-          git push "https://x-access-token:${TAP_TOKEN}@github.com/${{ vars.HOMEBREW_TAP_REPO }}" HEAD:main
+          git push "https://x-access-token:${TAP_TOKEN}@github.com/${HOMEBREW_TAP_REPO}" HEAD:main
