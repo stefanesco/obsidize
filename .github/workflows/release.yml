@@ -43,7 +43,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Cache Clojure dependencies
         uses: actions/cache@v4
@@ -216,11 +216,6 @@ jobs:
           echo "ARM64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-arm64-macOS.tar.gz" >> "$GITHUB_ENV"
           echo "AMD64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-macOS.tar.gz" >> "$GITHUB_ENV"
           echo "LINUX_AMD_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-Linux.tar.gz" >> "$GITHUB_ENV"
-
-          # Optional SPDX license (e.g., MIT, Apache-2.0). Set as a repo variable: vars.HOMEBREW_LICENSE
-          if [[ -n "${{ vars.HOMEBREW_LICENSE || '' }}" ]]; then
-            echo "HOMEBREW_LICENSE=${{ vars.HOMEBREW_LICENSE }}" >> "$GITHUB_ENV"
-          fi
 
       - name: Clone Homebrew tap
         shell: bash
