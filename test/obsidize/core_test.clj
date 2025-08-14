@@ -28,7 +28,10 @@
       (is (str/includes? cli-options-str ":force-full"))
       (is (str/includes? cli-options-str ":dry-run"))
       (is (str/includes? cli-options-str ":verbose"))
-      (is (str/includes? cli-options-str "--help")))))
+      (is (str/includes? cli-options-str "--help"))
+      (is (str/includes? cli-options-str ":version"))
+      (is (str/includes? cli-options-str "--version"))
+      (is (str/includes? cli-options-str "\"-V\"")))))
 
 (deftest only-verbose-provided?-test
   (testing "only-verbose-provided? function"
@@ -74,6 +77,19 @@
     (let [output (with-out-str (sut/-main "-v"))]
       (is (str/includes? output "OBSIDIZE"))
       (is (str/includes? output "USAGE EXAMPLES")))))
+
+(deftest main-version-flag-test
+  (testing "-main with --version flag"
+    (let [output (with-out-str (sut/-main "--version"))]
+      (is (str/includes? output "obsidize"))
+      (is (str/includes? output sut/app-version))
+      (is (not (str/includes? output "USAGE EXAMPLES")))))
+
+  (testing "-main with -V flag"
+    (let [output (with-out-str (sut/-main "-V"))]
+      (is (str/includes? output "obsidize"))
+      (is (str/includes? output sut/app-version))
+      (is (not (str/includes? output "USAGE EXAMPLES"))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Integration Tests - Simple Cases

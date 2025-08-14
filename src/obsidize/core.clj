@@ -55,7 +55,11 @@
    ["-v" "--verbose" "Verbose output"
     :id :verbose
     :default false]
-   ["-h" "--help" "Show this help message"]])
+   ["-V" "--version" "Show version information"
+    :id :version
+    :default false]
+   ["-h" "--help" "Show this help message"
+    :id :help]])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main Entrypoint
@@ -164,6 +168,10 @@
   (println)
   (println "USAGE EXAMPLES:")
   (println)
+  (println "  Show Version:")
+  (println "    obsidize --version")
+  (println "    → Displays the current version of obsidize")
+  (println)
   (println "  First Import (from .dms archive):")
   (println "    obsidize --input data-2024-12-01.dms --output-dir my-vault/")
   (println "    → Extracts archive, creates vault structure, imports all conversations & projects")
@@ -220,6 +228,11 @@
   [& args]
   (let [{:keys [options errors summary]} (cli/parse-opts args cli-options)]
     (cond
+      ;; Show version when explicitly requested
+      (:version options)
+      (do (println (str "obsidize " app-version))
+          (shutdown-agents))
+
       ;; Show help when explicitly requested
       (:help options)
       (do (print-help summary)
