@@ -501,6 +501,9 @@ Options:
       --force-full         Force full re-import, ignore existing vault
       --dry-run           Show what would be done without making changes
   -v, --verbose           Verbose output with detailed progress
+  -d, --debug             Enable debug logging for troubleshooting
+      --diagnostics       Run system diagnostics and exit
+  -V, --version           Show version information
   -h, --help              Show help message
 
 Examples:

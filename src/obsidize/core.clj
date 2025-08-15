@@ -220,10 +220,10 @@
                       (when verbose (println (str "Creating conversation: " (:uuid item))))
                       (conversations/process-conversation (:claude-data item) output-dir app-version options))
 
-                    ;; Process conversation updates
+                    ;; Process conversation updates  
                     (doseq [item (get-in update-plan [:conversations :update-existing])]
                       (when verbose (println (str "Updating conversation: " (:uuid item))))
-                      ;; TODO: Implement incremental conversation updates
+                      ;; Incremental conversation updates: appends new messages since obsidized_at
                       (conversations/process-conversation (:claude-data item) output-dir app-version options))
 
                     ;; Process new projects
