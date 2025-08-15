@@ -1,25 +1,111 @@
 # Obsidize
 
-> An application (written in Clojure) that converts Claude exported private data into Obsidian-ready markdown files with intelligent incremental updates.
+Obsidize is a tool that aims to make it easy to import and maintain Claude conversation history and project data in Obsidian, converting the raw json files that Anthropic provides into a structured folder with proper linking and metadata, and implementing an update process that only process what's actually changed.
 
-Obsidize makes it seamless to import and maintain your Claude conversation history and project data in Obsidian, creating a structured vault with proper linking, metadata, and smart updates that only process what's actually changed.
+> While I followed software engineering best practices in developing and packaging this application it remains a personal project and may not cover all edge cases.
+>
+> The code, documentation and binaries are provided in the hope of being useful but without any warranty.
+>
+> The code is released under GNU Affero General Public License v3.0 (see [License](#license) for details).
+>
 
 ## ✨ Features
 
-- **🔄 Incremental Updates**: Smart detection of new and updated content - only processes what's changed
-- **📦 Universal Input Support**: Works with Claude data packs in any format (folders, .dms archives)
-- **🗂️ Structured Output**: Creates organized Obsidian vault with conversations and projects
+- **🔄 Incremental Updates**: Detection of new and updated content - only processes what's changed
+- **📦 Flexible Input Support**: Works with Claude data packs in .dms archive or folder format
+- **🗂️ Structured Output**: Creates an organized Obsidian folder with conversations and projects notes
 - **📋 Rich Metadata**: Includes YAML frontmatter with UUIDs, timestamps, and relationships
-- **🏷️ Custom Tagging**: Add your own tags and links to imported content
-- **🛡️ Resilient Processing**: Gracefully handles missing or malformed data with detailed error reporting
-- **🔄 Sync-Safe**: Works across multiple devices with Obsidian sync (no external state files)
-- **🔍 Dry Run Mode**: Preview changes before applying them
+- **🏷️ Custom Tagging**: Allows adding custom tags and links to imported content via the command line
+- **🛡️ Resilient Processing**: Handles missing or malformed data with detailed error reporting
+- **🔄 Sync-Safe**: As it doesn't use any local/external state files the updates work across devices
+- **🔍 Dry Run Mode**: Allows to preview changes before applying them
 - **📊 Progress Reporting**: Clear feedback on what's being processed and updated
+
+
+## 🚀 Quick Install
+
+Obsidize is available as a binary via Homebrew (recommended for macOS users). For Linux, use homebrew if available or download the binaries from GitHub releases.
+
+### Via Homebrew (macOS/Linux)
+
+```bash
+# Install
+brew install stefanesco/obsidize/obsidize
+
+# Update
+brew upgrade obsidize
+```
+
+### Manual Download (macOS/Linux)
+
+1. Go to the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest).
+2. Download the binary for your platform (e.g., `obsidize-macos-amd64.tar.gz` or `obsidize-linux-amd64.tar.gz`).
+3. Extract and add to your PATH:
+
+   ```bash
+   tar -xzf obsidize-<platform>.tar.gz
+   mv obsidize /usr/local/bin/  # Or any directory in your PATH
+   ```
+
+4. To update: Download the new version and replace the binary.
+
+Verify installation:
+
+```bash
+obsidize --help
+```
+
+## ✨ Quick Usage
+
+### Export your data
+
+1. In **Claude**, go to your account -> ```Settings``` -> ```Privacy``` -> ```Export Data```
+2. Use the download link to retrieve your data and save it as either a ```.dms``` file or an uncompressed folder.
+3. the downloaded data should contain 3 files: ```conversations.json```, ```projects.json```, and ```users.json``` (don't worry about this - ```obsidize``` will handle it).
+
+### First-Time Import
+
+```bash
+obsidize --input claude-export.dms --output-dir my-obsidian-vault
+```
+
+### Incremental Update (Default)
+
+```bash
+obsidize --input new-claude-export.dms --output-dir my-obsidian-vault
+```
+This only adds new/updated content.
+
+### Preview Changes (Dry Run)
+```bash
+obsidize --input new-export.dms --output-dir my-obsidian-vault --dry-run
+```
+
+### Full Re-Import
+```bash
+obsidize --input export.dms --output-dir my-obsidian-vault --force-full
+```
+
+Add custom tags/links:
+```bash
+obsidize --input export.dms --output-dir my-obsidian-vault --tags ai,claude --links "[[AI Tools]]","[[Notes]]"
+```
+
+For full options, run `obsidize --help` (see below for details).
+
+**Tips**:
+- Backup your Obsidian vault before running.
+- Use `--verbose` for detailed output.
+- Output structure: Conversations as individual .md files; projects as folders with overviews and documents.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
+#### To use (macOS/Linux):
+- [Homebrew](https://brew.sh/) package manager
+
+#### To build:
 - [Clojure CLI](https://clojure.org/guides/install_clojure)
 - [Babashka](https://babashka.org/) (optional, for development tasks)
 
@@ -627,7 +713,7 @@ To test the release pipeline:
 
 This is a safe and effective way to test any changes to the release process.
 
-## 📝 License
+## 📝 <a name="license"></a>License
 
 GNU Affero General Public License v3.0
 

@@ -4,7 +4,8 @@
             [clojure.string :as str]
             [clojure.set :as set]
             [cheshire.core :as json]
-            [obsidize.data-validation :as validation])
+            [obsidize.data-validation :as validation]
+            [obsidize.logging :as log])
   (:import [java.util.zip ZipFile ZipEntry]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -22,14 +23,20 @@
   (.isDirectory (io/file path)))
 
 (defn- zip-file?
-  "Check if path is a ZIP archive (including .dms files)"
+  "Check if path is a ZIP archive (including .dms files).
+   Enhanced with native-image diagnostics."
   [path]
   (and (file-exists? path)
        (not (directory? path))
        (try
-         (with-open [_zip (ZipFile. path)]
-           true)
-         (catch Exception _ false))))
+         (log/log-debug (str "Attempting to open ZIP file: " path))
+         (with-open [zip (ZipFile. path)]
+           (let [entry-count (count (enumeration-seq (.entries zip)))]
+             (log/log-debug (str "Successfully opened ZIP file with " entry-count " entries: " path))
+             true))
+         (catch Exception e
+           (log/log-debug (str "Failed to open as ZIP file: " path " - " (.getMessage e)))
+           false))))
 
 (defn detect-input-type
   "Detect the type of Claude data pack input.
@@ -58,18 +65,38 @@
 
 (defn extract-archive
   "Extract a .dms/.zip archive to a temporary directory.
-   Returns the path to the extracted directory or nil if extraction fails."
+   Returns the path to the extracted directory or nil if extraction fails.
+   Enhanced with diagnostics and native-image compatibility."
   [archive-path]
   (try
+    (log/log-verbose (str "Extracting archive: " archive-path))
+
+    ;; Diagnose temp directory access first
+    (let [temp-diag (log/diagnose-temp-directory)]
+      (when-not (:can-create-temp-files? temp-diag)
+        (throw (Exception. (str "Cannot create temporary files: " (:error temp-diag))))))
+
     (let [temp-dir (io/file (System/getProperty "java.io.tmpdir")
                             (str "obsidize-" (System/currentTimeMillis)))]
+      (log/log-debug (str "Creating temp directory: " (.getAbsolutePath temp-dir)))
       (.mkdirs temp-dir)
-      (with-open [zip-file (ZipFile. archive-path)]
-        (doseq [entry (enumeration-seq (.entries zip-file))]
-          (extract-zip-entry zip-file entry temp-dir)))
-      (.getAbsolutePath temp-dir))
+
+      (log/time-operation
+       "Archive extraction"
+       (with-open [zip-file (ZipFile. archive-path)]
+         (let [entries (enumeration-seq (.entries zip-file))
+               entry-count (count entries)]
+           (log/log-verbose (str "Extracting " entry-count " entries from archive"))
+           (doseq [entry entries]
+             (log/log-debug (str "Extracting: " (.getName entry)))
+             (extract-zip-entry zip-file entry temp-dir)))))
+
+      (let [result-path (.getAbsolutePath temp-dir)]
+        (log/log-success (str "Archive extracted to: " result-path))
+        result-path))
     (catch Exception e
-      (println (str "Failed to extract archive: " (.getMessage e)))
+      (log/log-error (str "Failed to extract archive: " (.getMessage e)))
+      (log/log-debug (str "Archive extraction stack trace: " (.printStackTrace e)))
       nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

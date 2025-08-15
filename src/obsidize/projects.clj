@@ -5,68 +5,84 @@
             [obsidize.utils :as utils]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Helper Functions
+;; Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; Removed duplicate create-tags-section - using utils/create-tags-section instead
+;; Function moved to utils namespace
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Core Logic
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn process-project
-  "Processes a single project and creates the corresponding folder and files."
-  [project {:keys [output-dir tags links app-version]}]
-  (println (str "Processing project: " (:name project) " (v" app-version ")"))
-  (let [project-name-sanitized (:name project) ; Keep original name for directory
-        project-dir (utils/ensure-directory (str output-dir "/" project-name-sanitized))
-        tags-section (utils/create-tags-section tags)
+  "Processes a single project and creates/updates the corresponding folder and files.
 
-        ;; 2. Sort docs and generate document files
-        sorted-docs (utils/sort-docs-chronologically (:docs project))
-        doc-filenames (doall
-                       (map-indexed
-                        (fn [idx doc]
-                          (let [filename (templates/format-project-document-filename
-                                          (inc idx)
-                                          (utils/sanitize-filename (:filename doc)))
-                                filepath (str (.getPath project-dir) "/" filename)
-                                frontmatter-data (utils/create-frontmatter-with-timestamps
-                                                  templates/project-document-frontmatter
-                                                  {:uuid (:uuid doc)
-                                                   :project_name (:name project) 
-                                                   :obsidize_version app-version
-                                                   :created_at (:created_at doc)})
-                                content (str (templates/format-frontmatter frontmatter-data)
-                                             (:content doc)
-                                             (or tags-section ""))]
-                            (utils/write-note-if-changed filepath content)
-                            filename))
-                        sorted-docs))
+  `project` — Claude project map with keys like :uuid :name :created_at :updated_at :docs
+  `options` — {:output-dir string
+               :tags       [string ...] or comma-string
+               :links      [string ...] or comma-string
+               :app-version string (optional; defaults to \"DEV\")}
 
-        ;; 3. Generate and write the project overview file
-        sanitized-name (utils/sanitize-filename (str (:name project) ".md"))
+  NOTE: caller (core) is responsible for honoring --dry-run semantics before calling here.
+  "
+  [project {:keys [output-dir tags links app-version] :as _options}]
+  (let [version (or app-version "DEV")
+        project-name (:name project)
+        _ (println (str "Processing project: " project-name " (v" version ")"))
+
+        ;; 1) Ensure project directory (keep original project name for the directory)
+        project-dir (utils/ensure-directory (str output-dir "/" project-name))
+
+        ;; Normalize options consistently
+        tags* (utils/normalize-list-option tags)
+        links* (utils/normalize-list-option links)
+        tags-section (utils/create-tags-section tags*)
+
+        ;; 2) Sort docs and generate document files
+        docs (or (:docs project) [])
+        sorted-docs (utils/sort-docs-chronologically docs)
+
+        doc-filenames
+        (doall
+         (map-indexed
+          (fn [idx doc]
+            (let [filename (templates/format-project-document-filename
+                            (inc idx)
+                            (utils/sanitize-filename (or (:filename doc) (str "doc-" (inc idx) ".md"))))
+                  filepath (str (.getPath project-dir) "/" filename)
+                  frontmatter-data (utils/create-frontmatter-with-timestamps
+                                    templates/project-document-frontmatter
+                                    {:uuid (:uuid doc)
+                                     :project_name project-name
+                                     :obsidize_version version
+                                     :created_at (:created_at doc)})
+                  content (str (templates/format-frontmatter frontmatter-data)
+                               (or (:content doc) "")
+                               (or tags-section ""))]
+              (utils/write-note-if-changed filepath content)
+              filename))
+          sorted-docs))
+
+        ;; 3) Generate and write the project overview file
+        sanitized-name (utils/sanitize-filename (str project-name ".md"))
         sanitized-name-base (first (str/split sanitized-name #"\."))
         overview-filename (templates/format-project-overview-filename sanitized-name-base)
         overview-filepath (str (.getPath project-dir) "/" overview-filename)
         overview-frontmatter (utils/create-frontmatter-with-timestamps
                               templates/project-overview-frontmatter
                               {:uuid (:uuid project)
-                               :project_name (:name project)
-                               :created_at (:created_at project) 
-                               :obsidize_version app-version
+                               :project_name project-name
+                               :created_at (:created_at project)
+                               :obsidize_version version
                                :updated_at (:updated_at project)})
         project-docs-section (templates/format-project-documents-section doc-filenames)
-        user-links-section (templates/format-project-links-section links)
+        user-links-section (templates/format-project-links-section links*)
         overview-content (templates/format-project-content
                           overview-frontmatter
-                          (:name project)
+                          project-name
                           (:description project)
                           project-docs-section
                           user-links-section
                           tags-section)]
-
-    ;; 1. Create the project directory - handled by ensure-directory call above
-    ;; 2. Documents already generated
-    ;; 3. Write the project overview file
+    ;; Write overview last
     (utils/write-note-if-changed overview-filepath overview-content)))

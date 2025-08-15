@@ -10,16 +10,25 @@
 (defn sanitize-filename
   "Sanitizes a string to be a valid filename, preserving the extension."
   [filename]
-  (let [extension (last (str/split filename #"\."))
-        name (first (str/split filename #"\."))]
-    (str (-> name
-             (str/lower-case)
-             (str/replace #"[^a-z0-9\-\._]" "-")
-             (str/replace #"-+" "-")
-             (str/replace #"-$" "")
-             (str/replace #"^-" ""))
-         "."
-         extension)))
+  (if (str/includes? filename ".")
+    (let [last-dot-idx (.lastIndexOf filename ".")
+          name (subs filename 0 last-dot-idx)
+          extension (subs filename (inc last-dot-idx))]
+      (str (-> name
+               (str/lower-case)
+               (str/replace #"[^a-z0-9\-\._]" "-")
+               (str/replace #"-+" "-")
+               (str/replace #"-$" "")
+               (str/replace #"^-" ""))
+           "."
+           extension))
+    ;; No extension - sanitize the whole string
+    (-> filename
+        (str/lower-case)
+        (str/replace #"[^a-z0-9\-\._]" "-")
+        (str/replace #"-+" "-")
+        (str/replace #"-$" "")
+        (str/replace #"^-" ""))))
 
 (defn create-tags-section
   "Creates a string of Obsidian tags for the note body."
@@ -84,4 +93,17 @@
       (do
         (println (str "Creating file: " file-path))
         (spit file-path content)))))
+
+(defn normalize-list-option
+  "Trims and drops blank strings from a vector or comma-separated string.
+   Returns a vector (possibly empty)."
+  [v]
+  (->> (cond
+         (nil? v) []
+         (vector? v) v
+         (string? v) (str/split v #",")
+         :else [(str v)]) ; Convert non-strings to string first
+       (map str/trim)
+       (remove str/blank?)
+       vec))
 

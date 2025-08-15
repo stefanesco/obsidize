@@ -1,7 +1,6 @@
 (ns obsidize.utils-test
   (:require [clojure.test :refer [deftest is testing]]
-            [obsidize.utils :as sut]
-))
+            [obsidize.utils :as sut]))
 
 (deftest sanitize-filename-test
   (testing "Basic filename sanitization"
@@ -27,5 +26,29 @@
     (is (= "2023-01-01 10:00:00" (sut/format-timestamp "2023-01-01T10:00:00.123Z")))
     (is (nil? (sut/format-timestamp nil)))))
 
+(deftest normalize-list-option-test
+  (testing "handles nil input"
+    (is (= [] (sut/normalize-list-option nil))))
+
+  (testing "handles vector input"
+    (is (= ["a" "b" "c"] (sut/normalize-list-option ["a" "b" "c"])))
+    (is (= ["trimmed"] (sut/normalize-list-option ["  trimmed  "])))
+    (is (= ["a" "c"] (sut/normalize-list-option ["a" "" "c"])))
+    (is (= [] (sut/normalize-list-option ["" "  " ""]))))
+
+  (testing "handles comma-separated string input"
+    (is (= ["a" "b" "c"] (sut/normalize-list-option "a,b,c")))
+    (is (= ["a" "b" "c"] (sut/normalize-list-option "a, b , c")))
+    (is (= ["a" "c"] (sut/normalize-list-option "a,,c")))
+    (is (= ["a" "c"] (sut/normalize-list-option "a, ,c")))
+    (is (= [] (sut/normalize-list-option ",,")))
+    (is (= [] (sut/normalize-list-option " , , "))))
+
+  (testing "handles single non-vector, non-string input"
+    (is (= ["42"] (sut/normalize-list-option 42)))
+    (is (= [":keyword"] (sut/normalize-list-option :keyword))))
+
+  (testing "handles empty string"
+    (is (= [] (sut/normalize-list-option "")))))
 
 ;; Tests run via Kaocha

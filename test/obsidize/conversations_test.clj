@@ -1,8 +1,13 @@
 (ns obsidize.conversations-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as str]
+            [clojure.tools.cli :as cli]
             [obsidize.conversations :as sut]
-            [obsidize.utils :as utils]))
+            [obsidize.utils :as utils]
+            [obsidize.vault-scanner :as vault-scanner]))
+
+;; Fixed timestamp for deterministic tests
+(def ^:private fixed-now "2025-01-01T00:00:00Z")
 
 (deftest sanitize-filename-test
   (testing "Basic filename sanitization"
@@ -14,69 +19,115 @@
     (is (string? (sut/format-message-timestamp "2023-01-01T10:00:00Z")))
     (is (nil? (sut/format-message-timestamp nil)))))
 
-(deftest basic-functionality-test
-  (testing "Functions don't crash with valid input"
-    (let [mock-conversation {:uuid "123"
-                             :name "Test"
-                             :created_at "2023-01-01T10:00:00Z"
-                             :updated_at "2023-01-01T10:00:00Z"
-                             :chats [{:q "Hello" :a "Hi" :create_time "2023-01-01T10:00:00Z"}]}
-          result (sut/generate-markdown-for-new-note mock-conversation "1.0.0")]
-      (is (map? result))
-      (is (:title result))
-      (is (:filename result))
-      (is (:content result)))))
-
-(deftest edge-cases-test
+(deftest generate-title-for-nameless-convo-edge-cases
   (testing "generate-title-for-nameless-convo handles edge cases"
-    (testing "nil chat"
-      (is (= "Unknown Date Untitled Conversation" (sut/generate-title-for-nameless-convo nil))))
+    (is (= "Unknown Date Untitled Conversation"
+           (sut/generate-title-for-nameless-convo nil)))
+    (is (string? (sut/generate-title-for-nameless-convo {})))
+    (is (string? (sut/generate-title-for-nameless-convo {:create_time "2023-01-01T10:00:00Z"})))
+    (is (str/includes? (sut/generate-title-for-nameless-convo {:q "" :create_time "2023-01-01T10:00:00Z"})
+                       "Untitled Conversation"))
+    (is (str/includes? (sut/generate-title-for-nameless-convo {:q "Hello world"})
+                       "Unknown Date"))
+    (is (str/includes? (sut/generate-title-for-nameless-convo {:q "   " :create_time "2023-01-01T10:00:00Z"})
+                       "Untitled Conversation"))))
 
-    (testing "empty chat"
-      (is (string? (sut/generate-title-for-nameless-convo {}))))
+(deftest generate-markdown-for-new-note-basic-and-edge
+  (testing "generate-markdown-for-new-note basic"
+    (with-redefs [utils/current-timestamp (fn [] fixed-now)]
+      (let [mock {:uuid "123"
+                  :name "Test"
+                  :created_at "2023-01-01T10:00:00Z"
+                  :updated_at "2023-01-01T11:00:00Z"
+                  :chats [{:q "Hello" :a "Hi" :create_time "2023-01-01T10:00:00Z"}]}
+            res (sut/generate-markdown-for-new-note mock "1.0.0" {:tags ["ai"] :links ["[[L]]"]})]
+        (is (map? res))
+        (is (string? (:title res)))
+        (is (string? (:filename res)))
+        (is (string? (:content res)))
+        (is (str/includes? (:content res) "obsidized_at: 2025-01-01"))
+        (is (str/includes? (:content res) "obsidize_version: 1.0.0"))
+        (is (str/includes? (:content res) "tags:"))
+        (is (str/includes? (:content res) "[[L]]")))))
 
-    (testing "missing question"
-      (is (string? (sut/generate-title-for-nameless-convo {:create_time "2023-01-01T10:00:00Z"}))))
+  (testing "no chats → no messages placeholder"
+    (with-redefs [utils/current-timestamp (fn [] fixed-now)]
+      (doseq [chats [nil []]]
+        (let [res (sut/generate-markdown-for-new-note {:uuid "x" :chats chats} "1.0.0" {})]
+          (is (str/includes? (:content res) "[No messages found]"))))))
 
-    (testing "empty question"
-      (is (str/includes? (sut/generate-title-for-nameless-convo {:q "" :create_time "2023-01-01T10:00:00Z"})
-                         "Untitled Conversation")))
+  (testing "malformed chat entries produce placeholders"
+    (with-redefs [utils/current-timestamp (fn [] fixed-now)]
+      (let [res (sut/generate-markdown-for-new-note
+                 {:uuid "test" :chats [{} {:q nil :a nil} {:q "" :a ""}]}
+                 "1.0.0" {})]
+        (is (str/includes? (:content res) "[Missing question]"))
+        (is (str/includes? (:content res) "[Missing answer]"))))))
 
-    (testing "missing create_time"
-      (is (str/includes? (sut/generate-title-for-nameless-convo {:q "Hello world"})
-                         "Unknown Date")))
+(deftest determine-new-messages-detection
+  (testing "detects messages after obsidized_at"
+    (with-redefs [;; Simulate frontmatter with obsidized_at at 10:00
+                  obsidize.vault-scanner/extract-frontmatter (fn [_] {:frontmatter "obsidized_at: 2023-01-01T10:00:00Z"})
+                  obsidize.vault-scanner/parse-simple-yaml (fn [s] {:obsidized_at "2023-01-01T10:00:00Z"})
+                  obsidize.vault-scanner/parse-timestamp (fn [s] (java.time.Instant/parse s))
+                  ;; message formatting stable
+                  utils/format-timestamp identity]
+      (let [conv {:chats [{:q "before" :a "a" :create_time "2023-01-01T09:00:00Z"}
+                          {:q "after" :a "b" :create_time "2023-01-01T10:00:01Z"}]}
+            res (sut/determine-new-messages conv "---")]
+        (is (map? res))
+        (is (= 1 (count (:new-messages res))))
+        (is (str/includes? (:messages-md res) "after"))))))
 
-    (testing "whitespace-only question"
-      (is (str/includes? (sut/generate-title-for-nameless-convo {:q "   " :create_time "2023-01-01T10:00:00Z"})
-                         "Untitled Conversation"))))
+(deftest process-conversation-creates-new-file
+  (testing "creates new file when it does not exist and uses sanitized filename"
+    (let [spit-args (atom nil)]
+      (with-redefs [utils/current-timestamp (fn [] fixed-now)
+                    clojure.java.io/file (fn [p]
+                                           (proxy [java.io.File] [p]
+                                             (exists [] false)))
+                    ;; capture writes
+                    spit (fn [path content] (reset! spit-args [path content]))]
+        (sut/process-conversation {:uuid "U" :name "Bad/Name: ?*" :chats []} "out" "1.2.3" {:tags ["t"]})
+        (let [[path content] @spit-args
+              filename (last (clojure.string/split path #"/"))]
+          (is (str/starts-with? path "out/"))
+          (is (not (re-find #"[/:*?]" filename))) ;; sanitized filename (not full path)
+          (is (str/includes? content "obsidize_version: 1.2.3"))
+          (is (str/includes? content "tags:")))))))
 
-  (testing "generate-markdown-for-new-note handles edge cases"
-    (testing "empty conversation"
-      (let [result (sut/generate-markdown-for-new-note {} "1.0.0")]
-        (is (map? result))
-        (is (:title result))
-        (is (:filename result))
-        (is (:content result))))
+(deftest process-conversation-appends-when-new-messages
+  (testing "appends when file exists and new messages detected; updates timestamps"
+    (let [spit-content (atom nil)]
+      (with-redefs [utils/current-timestamp (fn [] fixed-now)
+                    clojure.java.io/file (fn [p]
+                                           (proxy [java.io.File] [p]
+                                             (exists [] true)))
+                    slurp (fn [_] (str (str/join "\n" ["updated_at: 2020-01-01T00:00:00Z"
+                                                       "obsidized_at: 2020-01-01T00:00:00Z"])
+                                       "\n\n--- old content ---"))
+                    obsidize.vault-scanner/extract-frontmatter (fn [_] {:frontmatter "obsidized_at: 2020-01-01T00:00:00Z"})
+                    obsidize.vault-scanner/parse-simple-yaml (fn [_] {:obsidized_at "2020-01-01T00:00:00Z"})
+                    obsidize.vault-scanner/parse-timestamp (fn [s] (java.time.Instant/parse s))
+                    ;; force new messages
+                    sut/determine-new-messages (fn [_ _] {:new-messages [{}] :messages-md "MSG"})
+                    spit (fn [_ content] (reset! spit-content content))]
+        (sut/process-conversation {:uuid "u" :updated_at "2025-02-02T00:00:00Z"} "out" "1.0.0" {})
+        (let [c @spit-content]
+          (is (str/includes? c "updated_at: 2025-02-02T00:00:00Z"))
+          (is (str/includes? c "obsidized_at: 2025-01-01T00:00:00Z"))
+          (is (str/includes? c "MSG")))))))
 
-    (testing "nil chats"
-      (let [result (sut/generate-markdown-for-new-note {:uuid "test" :chats nil} "1.0.0")]
-        (is (str/includes? (:content result) "[No messages found]"))))
-
-    (testing "empty chats"
-      (let [result (sut/generate-markdown-for-new-note {:uuid "test" :chats []} "1.0.0")]
-        (is (str/includes? (:content result) "[No messages found]"))))
-
-    (testing "malformed chat entries"
-      (let [result (sut/generate-markdown-for-new-note {:uuid "test"
-                                                        :chats [{}
-                                                                {:q nil :a nil}
-                                                                {:q "" :a ""}]} "1.0.0")]
-        (is (str/includes? (:content result) "[Missing question]"))
-        (is (str/includes? (:content result) "[Missing answer]"))))
-
-    (testing "missing required fields"
-      (let [result (sut/generate-markdown-for-new-note {:chats [{:q "Hello" :a "Hi"}]} "1.0.0")]
-        (is (str/includes? (:content result) "unknown-uuid"))
-        (is (str/includes? (:content result) "Unknown"))))))
+(deftest process-conversation-skips-when-no-new
+  (testing "does not write when no new messages"
+    (let [spit-called (atom 0)]
+      (with-redefs [clojure.java.io/file (fn [p]
+                                           (proxy [java.io.File] [p]
+                                             (exists [] true)))
+                    slurp (fn [_] "content")
+                    sut/determine-new-messages (fn [_ _] nil)
+                    spit (fn [& _] (swap! spit-called inc))]
+        (sut/process-conversation {:uuid "u"} "out" "1.0.0" {})
+        (is (zero? @spit-called))))))
 
 ;; Tests run via Kaocha

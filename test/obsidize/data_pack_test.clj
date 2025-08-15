@@ -353,10 +353,12 @@
         (is (vector? (:data proj-result))))))
 
   (testing "Directory permissions and access"
-    ;; Test with directory that user can't read (simulated)
-    (with-redefs [obsidize.data-pack/find-json-files (fn [_] (throw (java.lang.Exception. "Permission denied")))]
-      (let [temp-dir (create-temp-dir)]
-        (is (thrown? java.lang.Exception (sut/validate-data-pack (.getAbsolutePath temp-dir)))))))
+    (with-redefs [clojure.core/slurp (fn [_] (throw (java.io.IOException. "Permission denied")))]
+      (let [temp-dir (create-test-data-pack-directory sample-conversations sample-projects)
+            result (sut/process-data-pack (.getAbsolutePath temp-dir))]
+        (is (not (:success? result)))
+        (is (seq (:errors result)))
+        (is (str/includes? (first (:errors result)) "Permission denied")))))
 
   (testing "Large JSON file handling"
     ;; Test with large data structures

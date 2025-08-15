@@ -31,9 +31,9 @@
   (b/copy-dir {:src-dirs ["src" "resources"]
                :target-dir class-dir})
   (b/compile-clj {:basis basis
-                  :src-dirs ["src"] 
-                  :class-dir class-dir 
-                  :ns-compile '[obsidize.core]}) 
+                  :src-dirs ["src"]
+                  :class-dir class-dir
+                  :ns-compile '[obsidize.core]})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
@@ -67,4 +67,9 @@
                              "-march=native" ; Optimize for build machine's CPU
                              "--features=clj_easy.graal_build_time.InitClojureClasses" ; Modern flag for features
                              "--initialize-at-build-time=com.fasterxml.jackson.core"
-                             "--rerun-class-initialization-at-runtime=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"]})) ; Initialize entire Jackson core package
+                             "--rerun-class-initialization-at-runtime=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"
+                             ;; Native image configuration files are automatically detected from META-INF/native-image
+                             "--verbose" ; Enable verbose output for debugging
+                             "--report-unsupported-elements-at-runtime"
+                             ;; Additional ZIP-related initialization for better compatibility
+                             "--initialize-at-build-time=java.util.zip"]})) ; Initialize entire Jackson core package

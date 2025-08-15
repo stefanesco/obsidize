@@ -68,7 +68,7 @@
                         :updated_at "2025-08-05T12:00:00Z"
                         :chats [{:q "Hello" :a "Hi!" :create_time "2025-08-05T12:00:00Z"}]}]
 
-      (conv/process-conversation conversation test-output-dir "1.0.0")
+      (conv/process-conversation conversation test-output-dir "1.0.0" {})
 
       (let [files (filter #(.isFile %) (file-seq (io/file test-output-dir)))
             created-file (first files)]
@@ -97,7 +97,7 @@
                                   :chats [{:q "Hello" :a "Hi there!" :create_time "2025-08-04T10:30:00Z"} ; Existing
                                           {:q "How are you?" :a "I'm good!" :create_time "2025-08-05T10:30:00Z"}]}] ; New
 
-        (conv/process-conversation updated-conversation test-output-dir "1.0.0")
+        (conv/process-conversation updated-conversation test-output-dir "1.0.0" {})
 
         (let [updated-content (slurp filepath)]
           ;; Should contain original message
@@ -127,7 +127,7 @@
         (conv/process-conversation {:uuid "conv-123"
                                     :name "Test"
                                     :chats [{:q "Hello" :a "Hi!" :create_time "2025-08-05T10:00:00Z"}]} ; Before obsidized_at
-                                   test-output-dir "1.0.0")
+                                   test-output-dir "1.0.0" {})
 
         ;; File should be unchanged
         (let [final-content (slurp filepath)]

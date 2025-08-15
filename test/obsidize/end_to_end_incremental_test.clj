@@ -98,11 +98,11 @@
         ;; Step 4: Execute updates
         ;; Process conversation updates  
       (doseq [item (get-in update-plan [:conversations :update-existing])]
-        (conv/process-conversation (:claude-data item) test-vault-dir "1.0.0"))
+        (conv/process-conversation (:claude-data item) test-vault-dir "1.0.0" {}))
 
         ;; Process new conversations
       (doseq [item (get-in update-plan [:conversations :create-new])]
-        (conv/process-conversation (:claude-data item) test-vault-dir "1.0.0"))
+        (conv/process-conversation (:claude-data item) test-vault-dir "1.0.0" {}))
 
         ;; Process new projects
       (doseq [item (get-in update-plan [:projects :create-new])]
@@ -164,7 +164,7 @@
           conv-file (io/file test-vault-dir "existing-chat__conv-123.md")
           proj-file (io/file test-vault-dir "Project Alpha" "project-alpha.md")
           _ (Thread/sleep 10) ; Wait a bit to ensure timestamp differences would be detectable
-          _ (conv/process-conversation unchanged-conversation test-vault-dir "1.0.0") ; Process unchanged data
+          _ (conv/process-conversation unchanged-conversation test-vault-dir "1.0.0" {}) ; Process unchanged data
           _ (proj/process-project unchanged-project {:output-dir test-vault-dir})
           final-files (count (filter #(.isFile %) (file-seq (io/file test-vault-dir))))] ; Files should be unchanged
 
