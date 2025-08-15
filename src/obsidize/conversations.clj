@@ -1,7 +1,7 @@
 #!/usr/bin/env bb
 
 (ns obsidize.conversations
-  "Functions for processing conversations and generating markdown notes."
+  "Functions for processing conversations and generating markdown notes." 
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [obsidize.templates :as templates]

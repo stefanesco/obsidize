@@ -1,7 +1,7 @@
 (ns obsidize.conversations-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as str]
-            [clojure.tools.cli :as cli]
+            [clojure.java.io :as io]
             [obsidize.conversations :as sut]
             [obsidize.utils :as utils]
             [obsidize.vault-scanner :as vault-scanner]))
@@ -68,7 +68,7 @@
   (testing "detects messages after obsidized_at"
     (with-redefs [;; Simulate frontmatter with obsidized_at at 10:00
                   obsidize.vault-scanner/extract-frontmatter (fn [_] {:frontmatter "obsidized_at: 2023-01-01T10:00:00Z"})
-                  obsidize.vault-scanner/parse-simple-yaml (fn [s] {:obsidized_at "2023-01-01T10:00:00Z"})
+                  obsidize.vault-scanner/parse-simple-yaml (fn [_] {:obsidized_at "2023-01-01T10:00:00Z"})
                   obsidize.vault-scanner/parse-timestamp (fn [s] (java.time.Instant/parse s))
                   ;; message formatting stable
                   utils/format-timestamp identity]
@@ -83,9 +83,9 @@
   (testing "creates new file when it does not exist and uses sanitized filename"
     (let [spit-args (atom nil)]
       (with-redefs [utils/current-timestamp (fn [] fixed-now)
-                    clojure.java.io/file (fn [p]
-                                           (proxy [java.io.File] [p]
-                                             (exists [] false)))
+                    io/file (fn [p]
+                              (proxy [java.io.File] [p]
+                                (exists [] false)))
                     ;; capture writes
                     spit (fn [path content] (reset! spit-args [path content]))]
         (sut/process-conversation {:uuid "U" :name "Bad/Name: ?*" :chats []} "out" "1.2.3" {:tags ["t"]})
@@ -100,9 +100,9 @@
   (testing "appends when file exists and new messages detected; updates timestamps"
     (let [spit-content (atom nil)]
       (with-redefs [utils/current-timestamp (fn [] fixed-now)
-                    clojure.java.io/file (fn [p]
-                                           (proxy [java.io.File] [p]
-                                             (exists [] true)))
+                    io/file (fn [p]
+                              (proxy [java.io.File] [p]
+                                (exists [] true)))
                     slurp (fn [_] (str (str/join "\n" ["updated_at: 2020-01-01T00:00:00Z"
                                                        "obsidized_at: 2020-01-01T00:00:00Z"])
                                        "\n\n--- old content ---"))
@@ -121,9 +121,9 @@
 (deftest process-conversation-skips-when-no-new
   (testing "does not write when no new messages"
     (let [spit-called (atom 0)]
-      (with-redefs [clojure.java.io/file (fn [p]
-                                           (proxy [java.io.File] [p]
-                                             (exists [] true)))
+      (with-redefs [io/file (fn [p]
+                              (proxy [java.io.File] [p]
+                                (exists [] true)))
                     slurp (fn [_] "content")
                     sut/determine-new-messages (fn [_ _] nil)
                     spit (fn [& _] (swap! spit-called inc))]

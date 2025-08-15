@@ -6,7 +6,7 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(def test-vault-dir "test-e2e-vault")
+(def test-vault-dir "target/tests/test-e2e-vault")
 
 (defn create-initial-vault
   "Create an initial vault with some existing content"

@@ -1,6 +1,7 @@
 (ns obsidize.logging
-  "Enhanced logging and diagnostics for Obsidize, with native-image compatibility"
-  (:require [clojure.string :as str]))
+  "Enhanced logging and diagnostics for Obsidize, with native-image compatibility" 
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Logging Configuration
@@ -22,7 +23,7 @@
 (defn log-info
   "Log an info message"
   [message]
-  (println (str "ℹ️  " message)))
+  (println "ℹ️ " message))
 
 (defn log-verbose
   "Log a verbose message (only if verbose mode is enabled)"
@@ -99,7 +100,7 @@
   "Diagnose file access capabilities"
   [path]
   (try
-    (let [file (clojure.java.io/file path)
+    (let [file (io/file path)
           results {:path path
                    :exists? (.exists file)
                    :readable? (.canRead file)
@@ -119,7 +120,7 @@
     (let [temp-file (java.io.File/createTempFile "obsidize-test" ".zip")]
       ;; Create a minimal ZIP file for testing
       (with-open [zip-output (java.util.zip.ZipOutputStream.
-                              (clojure.java.io/output-stream temp-file))]
+                              (io/output-stream temp-file))]
         (.putNextEntry zip-output (java.util.zip.ZipEntry. "test.txt"))
         (.write zip-output (.getBytes "test content"))
         (.closeEntry zip-output))

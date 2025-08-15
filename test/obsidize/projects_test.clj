@@ -1,7 +1,9 @@
 (ns obsidize.projects-test
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as str]
-            [obsidize.projects :as sut]))
+            [obsidize.projects :as sut]
+            [obsidize.utils :as utils]
+            [obsidize.templates :as templates]))
 
 (deftest process-project-basic-writes
   (testing "writes docs + overview with normalized tags/links and version"

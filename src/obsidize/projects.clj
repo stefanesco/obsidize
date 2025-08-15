@@ -2,7 +2,8 @@
   "convert Claude projects JSON export into a structured Obsidian-ready file structure."
   (:require [clojure.string :as str]
             [obsidize.templates :as templates]
-            [obsidize.utils :as utils]))
+            [obsidize.utils :as utils]
+            [obsidize.incremental-projects :as incremental]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -86,3 +87,25 @@
                           tags-section)]
     ;; Write overview last
     (utils/write-note-if-changed overview-filepath overview-content)))
+
+(defn process-project-incremental
+  "Process a single project with incremental updates for existing projects.
+   
+   Uses the incremental update system to:
+   - Only process new documents not already in the vault
+   - Update project overview with new document links
+   - Preserve existing document numbering and chronological order
+   
+   `project` — Claude project map with keys like :uuid :name :created_at :updated_at :docs
+   `vault-index-project` — Existing vault state from vault-scanner
+   `options` — {:output-dir string
+                :tags       [string ...] or comma-string
+                :links      [string ...] or comma-string
+                :app-version string (optional; defaults to \"DEV\")
+                :dry-run    boolean
+                :verbose    boolean}
+   
+   Returns: Map with :success? boolean and :details about what was processed"
+  [project vault-index-project {:keys [output-dir app-version] :as options}]
+  (let [version (or app-version "DEV")]
+    (incremental/incremental-project-update project vault-index-project output-dir version options)))

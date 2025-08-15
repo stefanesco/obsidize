@@ -232,10 +232,14 @@
                       (projects/process-project (:claude-data item) options))
 
                     ;; Process project updates
+                    ;; Process project updates using incremental system
                     (doseq [item (get-in update-plan [:projects :update-existing])]
                       (when verbose (println (str "Updating project: " (:uuid item))))
-                      ;; TODO: Implement incremental project updates
-                      (projects/process-project (:claude-data item) options))
+                      (let [result (projects/process-project-incremental (:claude-data item) (:existing-data item) options)]
+                        (when (and verbose (:success? result))
+                          (let [details (:details result)]
+                            (println (str "  Added " (:new-documents-count details) " new documents, "
+                                          "metadata changed: " (:metadata-changed? details)))))))
 
                     (println "✅ Processing complete!"))))))
 

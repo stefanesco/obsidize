@@ -1,7 +1,13 @@
 (ns build
   (:require [clojure.tools.build.api :as b]
             [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [obsidize.data-pack :as sut]
+            [obsidize.data-validation :as validation]
+            [obsidize.incremental-projects :as sut]
+            [obsidize.logging :as sut]
+            [obsidize.templates :as templates]
+            [obsidize.vault-scanner :as vs]))
 
 (def lib 'stefanesco/obsidize)
 (def version (if-let [tag (System/getenv "RELEASE_VERSION")]
@@ -12,17 +18,38 @@
 (def basis (b/create-basis {:project "deps.edn"}))
 (def uber-file (format "%s/%s-standalone.jar" release-dir (name lib)))
 (def resources-dir "resources")
+(def group "stefanesco")
+(def artifact "obsidize")
+(def native-config-dir (format "%s/META-INF/native-image/%s/%s" resources-dir group artifact))
 (def version-file-path (str resources-dir "/obsidize/version.edn"))
+(def fixture-input "resources/test/fixtures/sample.dms")
+(def fixture-output "target/test/agent-run-output")
 
 (defn write-version-file [_]
   (println (str "Writing version " version " to " version-file-path))
   (.mkdirs (io/file resources-dir "obsidize"))
   (spit version-file-path (pr-str {:version version})))
 
+(defn- rm-rf [p]
+  (try
+    (when (fs/exists? p)
+      (if (fs/directory? p)
+        (fs/delete-tree p)
+        (fs/delete p)))
+    (catch Exception e
+      ;; don't fail the task just for cleanup issues
+      (println "⚠️  Could not delete" p ":" (.getMessage e)))))
+
 (defn clean [_]
-  (println "🧹 Cleaning build artifacts...")
-  (b/delete {:path "target"})
-  (b/delete {:path version-file-path}))
+  (println "🧹 Cleaning up generated files...")
+  (doseq [p ["target"
+             "trivy-report.json"
+             "test-output"
+             "out"
+             "test-e2e-vault"
+             "test-vault-integration"]]
+    (rm-rf p))
+  (println "✅ Cleanup complete."))
 
 (defn uber [_]
   (println "📦 Creating uberjar...")
@@ -30,26 +57,80 @@
   (.mkdirs (io/file release-dir))
   (b/copy-dir {:src-dirs ["src" "resources"]
                :target-dir class-dir})
-  (b/compile-clj {:basis basis
-                  :src-dirs ["src"]
-                  :class-dir class-dir
-                  :ns-compile '[obsidize.core]})
+(b/compile-clj {:basis basis
+                :src-dirs ["src"]
+                :class-dir class-dir
+                :sort :topo})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
            :main 'obsidize.core})
   (println (str "✅ Uberjar created: " uber-file)))
 
+(defn- run-with-agent
+  "Run obsidize.core under the Graal tracing agent with given CLI args."
+  [basis & cli-args]
+  (let [agent (format "-agentlib:native-image-agent=config-output-dir=%s"
+                       native-config-dir)
+        jc    (b/java-command {:basis basis
+                               :java-opts (into (:java-opts basis)
+                                                ["-Dclojure.main.report=stderr" agent])
+                               :main 'clojure.main
+                               :main-args (into ["-m" "obsidize.core"] cli-args)})
+        _     (println "🔎 Tracing cmd:" (clojure.string/join " " (:command-args jc)))
+        res   (b/process (-> jc (assoc :out :inherit :err :inherit)))]
+    (when-not (zero? (:exit res))
+      (println "❌ Tracing run failed with exit" (:exit res))
+      (System/exit 1))))
+
+(defn generate-native-config [_]
+  (println "🤔 Generating native-image configuration...")
+  
+  (let [jv (.. (ProcessBuilder. ["java" "-version"])
+               (redirectErrorStream true)
+               (start))
+        out (slurp (.getInputStream jv))]
+    (when-not (re-find #"GraalVM" out)
+      (println "❌ JAVA_HOME does not point to GraalVM. `java -version` was:\n" out)
+      (println "   Ensure GraalVM is active before running tracing:")
+      (println "   export JAVA_HOME=<path-to-graalvm>; export PATH=\"$JAVA_HOME/bin:$PATH\"")
+      (System/exit 1)))
+  
+  (b/delete {:path native-config-dir})
+  (clojure.java.io/make-parents (str native-config-dir "/_.keep"))
+
+  ;; Use runtime deps (no :native alias for tracing)
+  (let [run-basis (b/create-basis {:project "deps.edn"})]
+    ;; Exercise common CLI paths
+    (run-with-agent run-basis "--help")
+    (run-with-agent run-basis "--version")
+    (run-with-agent run-basis "--diagnostics")
+
+    ;; Real-ish scenario using committed fixture (if present)
+    (when (.exists (clojure.java.io/file fixture-input))
+      (println "🧪 Tracing scenario with fixture:" fixture-input)
+      (run-with-agent run-basis
+                      "--verbose"
+                      "--debug"
+                      "--input" fixture-input
+                      "--output-dir" fixture-output
+                      "--dry-run")))
+  (println "✅ Native-image configuration written to:" native-config-dir))
+
 (defn native-image [_]
   (println "🚀 Building native image... (This may take a while)")
-  ;; For native image, we need a basis with the :native alias to get graal-build-time on the classpath
-  (let [native-basis (b/create-basis {:project "deps.edn"
-                                      :aliases [:native]})]
-    (println "📦 Creating uberjar for native image...")
-    (clean nil)
+
+  ;; 1) Generate tracing config to resources/META-INF/native-image/...
+  (generate-native-config nil)
+
+  ;; 2) Build uberjar with the :native alias so graal-build-time is on the classpath,
+  ;;    and so the just-generated configs are included in the jar.
+  (let [native-basis (b/create-basis {:project "deps.edn" :aliases [:native]})]
+    (println "📦 Creating uberjar for native image (with :native deps + configs)...")
+    (clean nil)                                 ;; clean target
     (.mkdirs (io/file release-dir))
     (write-version-file nil)
-    (b/copy-dir {:src-dirs ["src" "resources"]
+    (b/copy-dir {:src-dirs ["src" "resources"]   ;; include resources => includes generated configs
                  :target-dir class-dir})
     (b/compile-clj {:basis native-basis
                     :src-dirs ["src"]
@@ -59,17 +140,32 @@
              :uber-file uber-file
              :basis native-basis
              :main 'obsidize.core}))
+
+  ;; 3) Build the native image from that uberjar
   (println "Starting GraalVM native-image build...")
-  (b/process {:command-args ["native-image"
-                             "-jar" uber-file
-                             "--no-fallback"
-                             "-o" (format "%s/%s" release-dir (name lib))
-                             "-march=native" ; Optimize for build machine's CPU
-                             "--features=clj_easy.graal_build_time.InitClojureClasses" ; Modern flag for features
-                             "--initialize-at-build-time=com.fasterxml.jackson.core"
-                             "--rerun-class-initialization-at-runtime=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"
-                             ;; Native image configuration files are automatically detected from META-INF/native-image
-                             "--verbose" ; Enable verbose output for debugging
-                             "--report-unsupported-elements-at-runtime"
-                             ;; Additional ZIP-related initialization for better compatibility
-                             "--initialize-at-build-time=java.util.zip"]})) ; Initialize entire Jackson core package
+  (let [res (b/process {:command-args
+                        ["native-image"
+                         "-jar" uber-file
+                         "--no-fallback"
+                         "-o" (format "%s/%s" release-dir (name lib))
+                         ;; comment the next line for portable binaries
+                         "-march=native"
+                         "--verbose"
+                         "--report-unsupported-elements-at-runtime"
+                         "-H:+ReportExceptionStackTraces"
+
+                         ;; ✅ Make sure Clojure core is initialized at build-time
+                         "--initialize-at-build-time=clojure"
+                         "--initialize-at-run-time=clojure.core.server__init"
+
+
+                         ;; ✅ Force these libs to initialize at run time (overrides clj-easy’s package init)
+                         "--initialize-at-run-time=cheshire,com.fasterxml.jackson.core,com.fasterxml.jackson.databind"
+                         "--initialize-at-run-time=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"
+
+                         "--initialize-at-build-time=java.util.zip"]
+                        :out :inherit :err :inherit})]
+    (if (zero? (:exit res))
+      (println "✅ Native image built.")
+      (do (println "❌ native-image failed with exit" (:exit res)) 
+          (System/exit (:exit res))))))

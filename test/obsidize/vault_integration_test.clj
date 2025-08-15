@@ -4,9 +4,9 @@
             [clojure.java.io :as io]
             [clojure.string :as str]))
 
-(def test-vault-path "test-vault-integration")
+(def test-vault-path "target/tests/test-vault-integration")
 
-(defn create-test-vault 
+(defn create-test-vault
   "Create a test vault with sample files to test full integration"
   []
   (let [vault-dir (io/file test-vault-path)]
@@ -39,7 +39,7 @@
     ;; Create a corrupted file with malformed frontmatter
     (spit (str test-vault-path "/malformed.md") "---\nbroken yaml: no closing\n\n# Content")))
 
-(defn delete-test-vault 
+(defn delete-test-vault
   "Clean up test vault recursively"
   []
   (letfn [(delete-recursively [file]

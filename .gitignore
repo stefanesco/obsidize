@@ -29,6 +29,9 @@ dependency-check-report.*
 resources/local
 resources/data/local
 test-output/
+out/
+test-e2e-vault/
+test-vault-integration/
 
 
 # LLMs
@@ -36,6 +39,7 @@ test-output/
 CLAUDE.md
 .mcp.json
 .gemini/
+.clojure-mcp/
 
 # Node
 package-lock.json

@@ -1,5 +1,5 @@
 (ns obsidize.data-validation
-  "Robust data validation for Claude exports to prevent NullPointerExceptions"
+  "Robust data validation for Claude exports to prevent NullPointerExceptions" 
   (:require [clojure.string :as str]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
