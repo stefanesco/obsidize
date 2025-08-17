@@ -31,1458 +31,6 @@
       "type": "[Z"
     },
     {
-      "type": "cheshire.core$copy_arglists",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$create_generator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$create_pretty_printer",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1004",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1008",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1032",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1034",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1064",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1066",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1068",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1070",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1072",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1074",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1076",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1078",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval1080",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval486",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval488",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval492",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval523",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval747",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$eval930",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$generate_cbor",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$generate_smile",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$generate_stream",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$generate_string",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parse_cbor",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parse_smile",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parse_stream",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parse_stream_strict",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parse_string",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parse_string_strict",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parsed_seq",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parsed_seq_STAR_",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$parsed_smile_seq",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$with_writer",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core$write",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.core__init"
-    },
-    {
-      "type": "cheshire.factory$apply_base_opts",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$apply_json_opts",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval494",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval496",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval500",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval504",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval514",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval517",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$eval520",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$make_cbor_factory",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$make_json_factory",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory$make_smile_factory",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.factory__init"
-    },
-    {
-      "type": "cheshire.generate$add_encoder",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$byte_array_QMARK_",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_bool",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_date",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_int",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_long",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_named",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_nil",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_number",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_ratio",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_seq",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_str",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$encode_symbol",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval525",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval527",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval531",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval536",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval538",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval542",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval545",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval547",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval549",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval564",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval566",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval568",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval573",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval577",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval581",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval583",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval586",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval588",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval594",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval603",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval607",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval613",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval623",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval627",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval629",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval643",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval647",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval651",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval658",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval662",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval665",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$eval667",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$fail",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$generate",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$generate_array",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$generate_basic_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$generate_key_fn_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$generate_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$i_QMARK_",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$number_dispatch",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$remove_encoder",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$tag",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate$write_string",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate.JSONable"
-    },
-    {
-      "type": "cheshire.generate__init"
-    },
-    {
-      "type": "cheshire.generate_seq$eval749",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval751",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval755",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval759",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval764",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval768",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval770",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval775",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval779",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval781",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval786",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval790",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval792",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval797",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval801",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval807",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval816",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval820",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval826",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval836",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval840",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval842",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval856",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval860",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval864",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval871",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$eval875",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$generate",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$generate_array",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$generate_basic_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$generate_key_fn_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$generate_map",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$write_end_array",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$write_end_object",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$write_start_array",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq$write_start_object",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.generate_seq__init"
-    },
-    {
-      "type": "cheshire.parse$eval932",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval936",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval941",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval943",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval949",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval959",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval963",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval967",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval975",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$eval979",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$lazily_parse_array",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$parse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$parse_STAR_",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$parse_array",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$parse_object",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$parse_strict",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse$tag",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "cheshire.parse__init"
-    },
-    {
-      "type": "cheshire.prettyprint.CustomPrettyPrinter"
-    },
-    {
       "type": "clojure.asm.ClassVisitor"
     },
     {
@@ -1876,6 +424,957 @@
       "type": "clojure.core_proxy__init"
     },
     {
+      "type": "clojure.data.json$__GT_hex_string",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$_read",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$_read1",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$codepoint",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$codepoint_case",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$codepoint_clause",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$default_sql_date__GT_instant_fn",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$default_value_fn",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$default_write_fn",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$default_write_key_fn",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eof_array_exception",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eof_object_exception",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval486",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval488",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval492",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval496",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval498",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval500",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval505",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval512",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval517",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval519",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval527",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval529",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval599",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval602",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval604",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval606",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval623",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval625",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval663",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval665",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval667",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval669",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval671",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval673",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval675",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval677",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval679",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval681",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval683",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval685",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval687",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval689",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval691",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval693",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval695",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval697",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval699",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval701",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval703",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval705",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$eval707",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$fn__628",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$invalid_array_exception",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$invalid_key_exception",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$json_str",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$next_token",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$object_colon_exception",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$on_extra_throw",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$on_extra_throw_remaining",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pprint",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pprint_array",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pprint_dispatch",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pprint_generic",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pprint_json",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pprint_object",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$print_json",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$pushback_pbr",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_array",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_array_STAR_",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_decimal",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_escaped_char",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_hex_char",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_integer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_json",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_key",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_number",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_object",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_quoted_string",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$read_str",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$slow_read_string",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$slow_write_string",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$string_pbr",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_array",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_bignum",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_date",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_double",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_float",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_generic",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_indent",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_instant",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_json",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_named",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_null",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_object",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_plain",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_ratio",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_sql_date",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_str",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_string",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json$write_uuid",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "clojure.data.json.InternalPBR"
+    },
+    {
+      "type": "clojure.data.json.JSONWriter"
+    },
+    {
+      "type": "clojure.data.json.ReaderPBR"
+    },
+    {
+      "type": "clojure.data.json.StringPBR"
+    },
+    {
+      "type": "clojure.data.json__init"
+    },
+    {
       "type": "clojure.edn__init"
     },
     {
@@ -1912,9 +1411,6 @@
     },
     {
       "type": "clojure.lang.ASeq"
-    },
-    {
-      "type": "clojure.lang.Associative"
     },
     {
       "type": "clojure.lang.BigInt"
@@ -1999,6 +1495,9 @@
       "type": "clojure.lang.ISeq"
     },
     {
+      "type": "clojure.lang.IType"
+    },
+    {
       "type": "clojure.lang.Keyword"
     },
     {
@@ -2030,6 +1529,9 @@
       "type": "clojure.lang.Murmur3"
     },
     {
+      "type": "clojure.lang.Named"
+    },
+    {
       "type": "clojure.lang.Namespace",
       "allPublicFields": true
     },
@@ -2045,6 +1547,17 @@
     },
     {
       "type": "clojure.lang.PersistentHashSet"
+    },
+    {
+      "type": "clojure.lang.PersistentList",
+      "fields": [
+        {
+          "name": "creator"
+        }
+      ]
+    },
+    {
+      "type": "clojure.lang.PersistentQueue"
     },
     {
       "type": "clojure.lang.PersistentVector"
@@ -2092,6 +1605,33 @@
     },
     {
       "type": "clojure.main__init"
+    },
+    {
+      "type": "clojure.pprint.PrettyFlush"
+    },
+    {
+      "type": "clojure.pprint.cl_format__init"
+    },
+    {
+      "type": "clojure.pprint.column_writer__init"
+    },
+    {
+      "type": "clojure.pprint.dispatch__init"
+    },
+    {
+      "type": "clojure.pprint.pprint_base__init"
+    },
+    {
+      "type": "clojure.pprint.pretty_writer__init"
+    },
+    {
+      "type": "clojure.pprint.print_table__init"
+    },
+    {
+      "type": "clojure.pprint.utilities__init"
+    },
+    {
+      "type": "clojure.pprint__init"
     },
     {
       "type": "clojure.set__init"
@@ -2508,73 +2048,6 @@
       "type": "clojure.walk__init"
     },
     {
-      "type": "com.fasterxml.jackson.core.JsonFactory",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.JsonFactory$Feature",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.JsonGenerationException"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.JsonGenerator"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.JsonParser"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.JsonToken",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.PrettyPrinter"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.StreamReadConstraints",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.StreamReadConstraints$Builder"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.StreamReadFeature",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.StreamWriteConstraints",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.StreamWriteConstraints$Builder"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.TSFBuilder"
-    },
-    {
-      "type": "com.fasterxml.jackson.core.json.JsonReadFeature",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.core.json.JsonWriteFeature",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.dataformat.cbor.CBORFactory",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.dataformat.cbor.CBORGenerator"
-    },
-    {
-      "type": "com.fasterxml.jackson.dataformat.smile.SmileFactory",
-      "allPublicFields": true
-    },
-    {
-      "type": "com.fasterxml.jackson.dataformat.smile.SmileGenerator"
-    },
-    {
       "type": "compile__stub.obsidize.incremental_projects.ProjectOverviewMetadata",
       "allPublicFields": true
     },
@@ -2603,8 +2076,41 @@
       "type": "java.io.Closeable"
     },
     {
+      "type": "java.io.EOFException"
+    },
+    {
       "type": "java.io.File",
-      "allPublicFields": true
+      "allPublicFields": true,
+      "methods": [
+        {
+          "name": "delete",
+          "parameterTypes": []
+        },
+        {
+          "name": "exists",
+          "parameterTypes": []
+        },
+        {
+          "name": "getName",
+          "parameterTypes": []
+        },
+        {
+          "name": "getPath",
+          "parameterTypes": []
+        },
+        {
+          "name": "isDirectory",
+          "parameterTypes": []
+        },
+        {
+          "name": "isFile",
+          "parameterTypes": []
+        },
+        {
+          "name": "listFiles",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "java.io.FileInputStream"
@@ -2652,23 +2158,30 @@
       "type": "java.io.Writer"
     },
     {
+      "type": "java.lang.Appendable"
+    },
+    {
       "type": "java.lang.AssertionError"
     },
     {
       "type": "java.lang.Boolean"
     },
     {
-      "type": "java.lang.Byte",
-      "allPublicFields": true
+      "type": "java.lang.Byte"
+    },
+    {
+      "type": "java.lang.CharSequence"
     },
     {
       "type": "java.lang.Character"
     },
     {
-      "type": "java.lang.Class"
+      "type": "java.lang.Class",
+      "allPublicFields": true
     },
     {
-      "type": "java.lang.Double"
+      "type": "java.lang.Double",
+      "allPublicFields": true
     },
     {
       "type": "java.lang.Exception"
@@ -2687,20 +2200,19 @@
       "type": "java.lang.Iterable"
     },
     {
-      "type": "java.lang.Long"
+      "type": "java.lang.Long",
+      "allPublicFields": true
+    },
+    {
+      "type": "java.lang.Math",
+      "allPublicFields": true
     },
     {
       "type": "java.lang.Number"
     },
     {
       "type": "java.lang.Object",
-      "allPublicFields": true,
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "allPublicFields": true
     },
     {
       "type": "java.lang.Short"
@@ -2710,6 +2222,9 @@
     },
     {
       "type": "java.lang.String"
+    },
+    {
+      "type": "java.lang.StringBuilder"
     },
     {
       "type": "java.lang.System",
@@ -2793,13 +2308,49 @@
       "type": "java.nio.file.attribute.FileAttribute"
     },
     {
+      "type": "java.sql.Date"
+    },
+    {
       "type": "java.sql.Timestamp"
     },
     {
-      "type": "java.text.SimpleDateFormat"
+      "type": "java.time.Instant",
+      "allPublicFields": true,
+      "methods": [
+        {
+          "name": "isBefore",
+          "parameterTypes": [
+            "java.time.Instant"
+          ]
+        },
+        {
+          "name": "now",
+          "parameterTypes": []
+        },
+        {
+          "name": "ofEpochMilli",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "toEpochMilli",
+          "parameterTypes": []
+        }
+      ]
     },
     {
-      "type": "java.time.Instant",
+      "type": "java.time.LocalDate"
+    },
+    {
+      "type": "java.time.ZoneId",
+      "allPublicFields": true
+    },
+    {
+      "type": "java.time.ZonedDateTime"
+    },
+    {
+      "type": "java.time.format.DateTimeFormatter",
       "allPublicFields": true
     },
     {
@@ -2830,9 +2381,6 @@
       "type": "java.util.Set"
     },
     {
-      "type": "java.util.SimpleTimeZone"
-    },
-    {
       "type": "java.util.TimeZone"
     },
     {
@@ -2848,6 +2396,12 @@
       "type": "java.util.concurrent.LinkedBlockingQueue"
     },
     {
+      "type": "java.util.concurrent.atomic.AtomicInteger"
+    },
+    {
+      "type": "java.util.concurrent.atomic.AtomicLong"
+    },
+    {
       "type": "java.util.concurrent.locks.ReentrantLock"
     },
     {
@@ -2857,10 +2411,50 @@
       "type": "java.util.regex.Pattern"
     },
     {
-      "type": "java.util.zip.ZipEntry"
+      "type": "java.util.zip.ZipEntry",
+      "methods": [
+        {
+          "name": "getName",
+          "parameterTypes": []
+        }
+      ]
     },
     {
-      "type": "java.util.zip.ZipFile"
+      "type": "java.util.zip.ZipFile",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "ZipFile",
+          "parameterTypes": [
+            "java.io.File"
+          ]
+        },
+        {
+          "name": "ZipFile",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "close",
+          "parameterTypes": []
+        },
+        {
+          "name": "entries",
+          "parameterTypes": []
+        },
+        {
+          "name": "getInputStream",
+          "parameterTypes": [
+            "java.util.zip.ZipEntry"
+          ]
+        }
+      ]
     },
     {
       "type": "java.util.zip.ZipOutputStream"
@@ -2884,7 +2478,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1214",
+      "type": "obsidize.conversations$eval1028",
       "methods": [
         {
           "name": "<init>",
@@ -2893,7 +2487,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1216",
+      "type": "obsidize.conversations$eval1064",
       "methods": [
         {
           "name": "<init>",
@@ -2902,7 +2496,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1220",
+      "type": "obsidize.conversations$eval898",
       "methods": [
         {
           "name": "<init>",
@@ -2911,7 +2505,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1262",
+      "type": "obsidize.conversations$eval900",
       "methods": [
         {
           "name": "<init>",
@@ -2920,7 +2514,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1286",
+      "type": "obsidize.conversations$eval904",
       "methods": [
         {
           "name": "<init>",
@@ -2929,7 +2523,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1344",
+      "type": "obsidize.conversations$eval946",
       "methods": [
         {
           "name": "<init>",
@@ -2938,7 +2532,7 @@
       ]
     },
     {
-      "type": "obsidize.conversations$eval1380",
+      "type": "obsidize.conversations$eval970",
       "methods": [
         {
           "name": "<init>",
@@ -2995,7 +2589,52 @@
       ]
     },
     {
-      "type": "obsidize.core$eval1212",
+      "type": "obsidize.core$eval1066",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval1199",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval1209",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval1210",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval1269",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval1270",
       "methods": [
         {
           "name": "<init>",
@@ -3022,34 +2661,7 @@
       ]
     },
     {
-      "type": "obsidize.core$eval1382",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "obsidize.core$eval142",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "obsidize.core$eval1515",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "obsidize.core$eval1575",
       "methods": [
         {
           "name": "<init>",
@@ -3067,6 +2679,15 @@
       ]
     },
     {
+      "type": "obsidize.core$eval896",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$exit",
       "methods": [
         {
@@ -3076,7 +2697,7 @@
       ]
     },
     {
-      "type": "obsidize.core$fn__1519",
+      "type": "obsidize.core$fn__1213",
       "methods": [
         {
           "name": "<init>",
@@ -3085,7 +2706,7 @@
       ]
     },
     {
-      "type": "obsidize.core$fn__1524",
+      "type": "obsidize.core$fn__1214",
       "methods": [
         {
           "name": "<init>",
@@ -3094,7 +2715,34 @@
       ]
     },
     {
-      "type": "obsidize.core$fn__1526",
+      "type": "obsidize.core$fn__1218",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$fn__1219",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$fn__1220",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$fn__1221",
       "methods": [
         {
           "name": "<init>",
@@ -3160,33 +2808,6 @@
       ]
     },
     {
-      "type": "obsidize.data_pack$eval1082",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "obsidize.data_pack$eval1120",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "obsidize.data_pack$eval1158",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "obsidize.data_pack$eval478",
       "methods": [
         {
@@ -3206,6 +2827,33 @@
     },
     {
       "type": "obsidize.data_pack$eval484",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.data_pack$eval766",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.data_pack$eval804",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.data_pack$eval842",
       "methods": [
         {
           "name": "<init>",
@@ -3307,7 +2955,7 @@
       "type": "obsidize.data_pack__init"
     },
     {
-      "type": "obsidize.data_validation$eval1084",
+      "type": "obsidize.data_validation$eval768",
       "methods": [
         {
           "name": "<init>",
@@ -3316,7 +2964,7 @@
       ]
     },
     {
-      "type": "obsidize.data_validation$eval1086",
+      "type": "obsidize.data_validation$eval770",
       "methods": [
         {
           "name": "<init>",
@@ -3325,7 +2973,7 @@
       ]
     },
     {
-      "type": "obsidize.data_validation$eval1090",
+      "type": "obsidize.data_validation$eval774",
       "methods": [
         {
           "name": "<init>",
@@ -3427,7 +3075,7 @@
       "type": "obsidize.data_validation__init"
     },
     {
-      "type": "obsidize.incremental_projects$eval1392",
+      "type": "obsidize.hints$class_if_present",
       "methods": [
         {
           "name": "<init>",
@@ -3436,7 +3084,7 @@
       ]
     },
     {
-      "type": "obsidize.incremental_projects$eval1394",
+      "type": "obsidize.hints$eval1201",
       "methods": [
         {
           "name": "<init>",
@@ -3445,7 +3093,7 @@
       ]
     },
     {
-      "type": "obsidize.incremental_projects$eval1398",
+      "type": "obsidize.hints$eval1205",
       "methods": [
         {
           "name": "<init>",
@@ -3454,7 +3102,37 @@
       ]
     },
     {
-      "type": "obsidize.incremental_projects$eval1403",
+      "type": "obsidize.hints__init"
+    },
+    {
+      "type": "obsidize.incremental_projects$eval1076",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.incremental_projects$eval1078",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.incremental_projects$eval1082",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.incremental_projects$eval1087",
       "methods": [
         {
           "name": "<init>",
@@ -3560,7 +3238,7 @@
       ]
     },
     {
-      "type": "obsidize.logging$eval1122",
+      "type": "obsidize.logging$eval806",
       "methods": [
         {
           "name": "<init>",
@@ -3569,7 +3247,7 @@
       ]
     },
     {
-      "type": "obsidize.logging$eval1124",
+      "type": "obsidize.logging$eval808",
       "methods": [
         {
           "name": "<init>",
@@ -3578,7 +3256,7 @@
       ]
     },
     {
-      "type": "obsidize.logging$eval1128",
+      "type": "obsidize.logging$eval812",
       "methods": [
         {
           "name": "<init>",
@@ -3587,7 +3265,7 @@
       ]
     },
     {
-      "type": "obsidize.logging$eval1153",
+      "type": "obsidize.logging$eval837",
       "methods": [
         {
           "name": "<init>",
@@ -3596,7 +3274,7 @@
       ]
     },
     {
-      "type": "obsidize.logging$eval1155",
+      "type": "obsidize.logging$eval839",
       "methods": [
         {
           "name": "<init>",
@@ -3698,7 +3376,7 @@
       "type": "obsidize.logging__init"
     },
     {
-      "type": "obsidize.projects$eval1384",
+      "type": "obsidize.projects$eval1068",
       "methods": [
         {
           "name": "<init>",
@@ -3707,7 +3385,7 @@
       ]
     },
     {
-      "type": "obsidize.projects$eval1386",
+      "type": "obsidize.projects$eval1070",
       "methods": [
         {
           "name": "<init>",
@@ -3716,7 +3394,7 @@
       ]
     },
     {
-      "type": "obsidize.projects$eval1390",
+      "type": "obsidize.projects$eval1074",
       "methods": [
         {
           "name": "<init>",
@@ -3725,7 +3403,7 @@
       ]
     },
     {
-      "type": "obsidize.projects$eval1497",
+      "type": "obsidize.projects$eval1181",
       "methods": [
         {
           "name": "<init>",
@@ -3755,7 +3433,7 @@
       "type": "obsidize.projects__init"
     },
     {
-      "type": "obsidize.templates$eval1222",
+      "type": "obsidize.templates$eval906",
       "methods": [
         {
           "name": "<init>",
@@ -3764,7 +3442,7 @@
       ]
     },
     {
-      "type": "obsidize.templates$eval1224",
+      "type": "obsidize.templates$eval908",
       "methods": [
         {
           "name": "<init>",
@@ -3773,7 +3451,7 @@
       ]
     },
     {
-      "type": "obsidize.templates$eval1228",
+      "type": "obsidize.templates$eval912",
       "methods": [
         {
           "name": "<init>",
@@ -3929,7 +3607,7 @@
       ]
     },
     {
-      "type": "obsidize.utils$eval1264",
+      "type": "obsidize.utils$eval948",
       "methods": [
         {
           "name": "<init>",
@@ -3938,7 +3616,7 @@
       ]
     },
     {
-      "type": "obsidize.utils$eval1266",
+      "type": "obsidize.utils$eval950",
       "methods": [
         {
           "name": "<init>",
@@ -3947,7 +3625,7 @@
       ]
     },
     {
-      "type": "obsidize.utils$eval1270",
+      "type": "obsidize.utils$eval954",
       "methods": [
         {
           "name": "<init>",
@@ -4022,7 +3700,7 @@
       ]
     },
     {
-      "type": "obsidize.vault_scanner$eval1288",
+      "type": "obsidize.vault_scanner$eval972",
       "methods": [
         {
           "name": "<init>",
@@ -4031,7 +3709,7 @@
       ]
     },
     {
-      "type": "obsidize.vault_scanner$eval1290",
+      "type": "obsidize.vault_scanner$eval974",
       "methods": [
         {
           "name": "<init>",
@@ -4040,7 +3718,7 @@
       ]
     },
     {
-      "type": "obsidize.vault_scanner$eval1294",
+      "type": "obsidize.vault_scanner$eval978",
       "methods": [
         {
           "name": "<init>",
@@ -4170,36 +3848,6 @@
       "glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
     },
     {
-      "glob": "cheshire/core.clj"
-    },
-    {
-      "glob": "cheshire/core__init.class"
-    },
-    {
-      "glob": "cheshire/factory.clj"
-    },
-    {
-      "glob": "cheshire/factory__init.class"
-    },
-    {
-      "glob": "cheshire/generate.clj"
-    },
-    {
-      "glob": "cheshire/generate__init.class"
-    },
-    {
-      "glob": "cheshire/generate_seq.clj"
-    },
-    {
-      "glob": "cheshire/generate_seq__init.class"
-    },
-    {
-      "glob": "cheshire/parse.clj"
-    },
-    {
-      "glob": "cheshire/parse__init.class"
-    },
-    {
       "glob": "clojure/core.clj"
     },
     {
@@ -4242,6 +3890,12 @@
       "glob": "clojure/core_proxy__init.class"
     },
     {
+      "glob": "clojure/data/json.clj"
+    },
+    {
+      "glob": "clojure/data/json__init.class"
+    },
+    {
       "glob": "clojure/edn.clj"
     },
     {
@@ -4276,6 +3930,54 @@
     },
     {
       "glob": "clojure/main__init.class"
+    },
+    {
+      "glob": "clojure/pprint.clj"
+    },
+    {
+      "glob": "clojure/pprint/cl_format.clj"
+    },
+    {
+      "glob": "clojure/pprint/cl_format__init.class"
+    },
+    {
+      "glob": "clojure/pprint/column_writer.clj"
+    },
+    {
+      "glob": "clojure/pprint/column_writer__init.class"
+    },
+    {
+      "glob": "clojure/pprint/dispatch.clj"
+    },
+    {
+      "glob": "clojure/pprint/dispatch__init.class"
+    },
+    {
+      "glob": "clojure/pprint/pprint_base.clj"
+    },
+    {
+      "glob": "clojure/pprint/pprint_base__init.class"
+    },
+    {
+      "glob": "clojure/pprint/pretty_writer.clj"
+    },
+    {
+      "glob": "clojure/pprint/pretty_writer__init.class"
+    },
+    {
+      "glob": "clojure/pprint/print_table.clj"
+    },
+    {
+      "glob": "clojure/pprint/print_table__init.class"
+    },
+    {
+      "glob": "clojure/pprint/utilities.clj"
+    },
+    {
+      "glob": "clojure/pprint/utilities__init.class"
+    },
+    {
+      "glob": "clojure/pprint__init.class"
     },
     {
       "glob": "clojure/set.clj"
@@ -4354,6 +4056,12 @@
     },
     {
       "glob": "obsidize/data_validation__init.class"
+    },
+    {
+      "glob": "obsidize/hints.clj"
+    },
+    {
+      "glob": "obsidize/hints__init.class"
     },
     {
       "glob": "obsidize/incremental_projects.clj"

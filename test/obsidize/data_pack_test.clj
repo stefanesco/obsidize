@@ -3,7 +3,7 @@
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [cheshire.core :as json]
+            [clojure.data.json :as json]
             [obsidize.data-pack :as sut]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -52,14 +52,14 @@
 
 (defn create-test-data-pack-directory [conversations projects]
   (let [temp-dir (create-temp-dir)]
-    (spit (io/file temp-dir "conversations.json") (json/generate-string conversations))
-    (spit (io/file temp-dir "projects.json") (json/generate-string projects))
+    (spit (io/file temp-dir "conversations.json") (json/write-str conversations))
+    (spit (io/file temp-dir "projects.json") (json/write-str projects))
     temp-dir))
 
 (defn create-incomplete-data-pack-directory []
   (let [temp-dir (create-temp-dir)]
     ;; Only create conversations.json, missing projects.json
-    (spit (io/file temp-dir "conversations.json") (json/generate-string sample-conversations))
+    (spit (io/file temp-dir "conversations.json") (json/write-str sample-conversations))
     temp-dir))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -341,8 +341,8 @@
     ;; Test single object vs array handling
     (let [temp-dir (create-temp-dir)]
       ;; Create JSON with single object instead of array
-      (spit (io/file temp-dir "conversations.json") (json/generate-string (first sample-conversations)))
-      (spit (io/file temp-dir "projects.json") (json/generate-string (first sample-projects)))
+      (spit (io/file temp-dir "conversations.json") (json/write-str (first sample-conversations)))
+      (spit (io/file temp-dir "projects.json") (json/write-str (first sample-projects)))
 
       (let [conv-result (sut/load-conversations (.getAbsolutePath temp-dir))
             proj-result (sut/load-projects (.getAbsolutePath temp-dir))]

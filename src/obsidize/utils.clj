@@ -9,7 +9,7 @@
 
 (defn sanitize-filename
   "Sanitizes a string to be a valid filename, preserving the extension."
-  [filename]
+  ^String [^String filename]
   (if (str/includes? filename ".")
     (let [last-dot-idx (.lastIndexOf filename ".")
           name (subs filename 0 last-dot-idx)

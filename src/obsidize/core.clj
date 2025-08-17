@@ -10,7 +10,8 @@
             [obsidize.conversations :as conversations]
             [obsidize.projects :as projects]
             [obsidize.vault-scanner :as vault-scanner]
-            [obsidize.logging :as log]))
+            [obsidize.logging :as log]
+            [obsidize.hints]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Application Version

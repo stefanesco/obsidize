@@ -3,7 +3,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [cheshire.core :as json]
+            [clojure.data.json :as json]
             [obsidize.logging :as log]
             [obsidize.data-pack :as data-pack]))
 
@@ -82,7 +82,7 @@
     ;; Test with simple JSON
     (try
       (let [json-str "{\"test\": \"value\", \"number\": 42}"
-            parsed (json/parse-string json-str true)]
+            parsed (json/read-str json-str :key-fn keyword)]
         (is (map? parsed))
         (is (= "value" (:test parsed)))
         (is (= 42 (:number parsed)))

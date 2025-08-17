@@ -3,7 +3,7 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.set :as set]
-            [cheshire.core :as json]
+            [clojure.data.json :as json]
             [obsidize.data-validation :as validation]
             [obsidize.logging :as log])
   (:import [java.util.zip ZipFile ZipEntry]))
@@ -135,7 +135,7 @@
   [file-path]
   (try
     (let [content (slurp file-path)
-          data (json/parse-string content true)]
+          data (json/read-str content :key-fn keyword)]
       {:success? true
        :data (cond
                (vector? data) (vec data) ; Ensure vector, not lazy seq

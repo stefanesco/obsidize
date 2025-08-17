@@ -1,11 +1,10 @@
-{:deps {;; For parsing JSON reports from tools like Trivy
-        cheshire/cheshire {:mvn/version "6.0.0"}}
+{:deps {org.babashka/json {:mvn/version "0.1.6"}}
 
  :tasks
  {:requires ([babashka.process :refer [shell]]
              [babashka.fs :as fs]
-             [cheshire.core :as json]
-             [clojure.string :as str])
+             [clojure.string :as str]
+             [babashka.json :as json])
 
   ;; ---
   ;; UTILITY TASKS
@@ -39,14 +38,13 @@
                  (println "⚠️  Clojure linting completed with warnings (non-blocking).")
                  (throw e)))))}
 
-
-  ;; ---
+;; ---
   ;; TESTING TASKS
   ;; ---
   test
   {:doc "Run Clojure tests with Kaocha and generate a coverage report."
    :task (shell "clojure -M:test")}
-  
+
   ;; ---
   ;; AUDITING & SECURITY TASKS
   ;; ---
@@ -80,7 +78,7 @@
   {:doc "Parse Trivy report for vulnerabilities and license issues, then fail if needed."
    :depends [trivy-scan]
    :task
-   (let [report (-> "target/trivy-report.json" slurp (json/parse-string true))
+   (let [report (-> "target/trivy-report.json" slurp (json/read-str { :key-fn keyword}))
          results (get-in report [:Results] [])
          disallowed-licenses #{}
 

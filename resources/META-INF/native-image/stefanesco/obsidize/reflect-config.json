@@ -1,0 +1,37 @@
+[
+    {
+        "name": "java.io.File",
+        "methods": [
+            { "name": "isFile", "parameterTypes": [] },
+            { "name": "isDirectory", "parameterTypes": [] },
+            { "name": "listFiles", "parameterTypes": [] },
+            { "name": "getName", "parameterTypes": [] },
+            { "name": "getPath", "parameterTypes": [] }
+        ]
+    },
+    {
+        "name": "clojure.lang.PersistentList",
+        "fields": [
+        { "name": "creator", "allowUnsafeAccess": true }
+        ]
+    },
+    {
+        "name": "java.time.Instant",
+        "methods": [
+            { "name": "now", "parameterTypes": [] },
+            { "name": "ofEpochMilli", "parameterTypes": ["long"] },
+            { "name": "toEpochMilli", "parameterTypes": [] },
+            { "name": "isBefore", "parameterTypes": ["java.time.Instant"]}
+        ]
+    },
+    {
+        "name": "java.util.zip.ZipFile",
+        "methods": [
+            { "name": "getInputStream", "parameterTypes": ["java.util.zip.ZipEntry"] },
+            { "name": "close", "parameterTypes": [] },
+            { "name": "ZipFile", "parameterTypes": ["java.io.File"] },
+            { "name": "ZipFile", "parameterTypes": ["java.lang.String"] },
+            { "name": "entries", "parameterTypes": [] }
+        ]
+    }
+]

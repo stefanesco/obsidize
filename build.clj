@@ -17,7 +17,7 @@
 (def artifact "obsidize")
 (def native-config-dir (format "%s/META-INF/native-image/%s/%s" resources-dir group artifact))
 (def version-file-path (str resources-dir "/obsidize/version.edn"))
-(def fixture-input "resources/test/fixtures/sample.dms")
+(def fixture-input "resources/data/local/data-2025-08-04-11-59-03-batch-0000.dms")
 (def fixture-output "target/test/agent-run-output")
 
 (defn write-version-file [_]
@@ -65,7 +65,7 @@
 (defn- run-with-agent
   "Run obsidize.core under the Graal tracing agent with given CLI args."
   [basis & cli-args]
-  (let [agent (format "-agentlib:native-image-agent=config-output-dir=%s"
+  (let [agent (format "-agentlib:native-image-agent=config-merge-dir=%s"
                       native-config-dir)
         jc (b/java-command {:basis basis
                             :java-opts (into (:java-opts basis)
@@ -91,7 +91,8 @@
       (println "   export JAVA_HOME=<path-to-graalvm>; export PATH=\"$JAVA_HOME/bin:$PATH\"")
       (System/exit 1)))
 
-  (b/delete {:path native-config-dir})
+  ;;> un-comment to delete configuration generated (b/delete {:path native-config-dir})
+
   (clojure.java.io/make-parents (str native-config-dir "/_.keep"))
 
   ;; Use runtime deps (no :native alias for tracing)
@@ -109,7 +110,12 @@
                       "--debug"
                       "--input" fixture-input
                       "--output-dir" fixture-output
-                      "--dry-run")))
+                      "--dry-run")
+      (run-with-agent run-basis
+                      "--verbose"
+                      "--debug"
+                      "--input" fixture-input
+                      "--output-dir" fixture-output)))
   (println "✅ Native-image configuration written to:" native-config-dir))
 
 (defn native-image [_]
@@ -131,9 +137,10 @@
                     :src-dirs ["src"]
                     :class-dir class-dir
                     :ns-compile '[obsidize.core
-                                  clojure.core.server
+                                  obsidize.hints
                                   clojure.spec.alpha
-                                  clojure.core.specs.alpha]})
+                                  clojure.core.specs.alpha
+                                  clojure.core.server]})
     (b/uber {:class-dir class-dir
              :uber-file uber-file
              :basis native-basis
@@ -152,16 +159,25 @@
                          "--report-unsupported-elements-at-runtime"
                          "-H:+ReportExceptionStackTraces"
 
-                         ;; ✅ Make sure Clojure core is initialized at build-time
-                         "--initialize-at-build-time=clojure"
-                         "--initialize-at-run-time=clojure.core.server__init"
+                         ;; ✅ Force these libs to initialize at run time (overrides clj-easy’s package init)
+                         "--initialize-at-run-time=clojure.pprint__init"
+                         "--initialize-at-run-time=clojure.pprint.dispatch__init"
+                         "--initialize-at-run-time=clojure.data.json__init"
+                         ;; Build-time: core only
 
-;; ✅ Force these libs to initialize at run time (overrides clj-easy’s package init)
-                         "--initialize-at-run-time=cheshire,com.fasterxml.jackson.core,com.fasterxml.jackson.databind"
-                         "--initialize-at-run-time=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"
+                         
+                         ;; 🔑 Let clj-easy configure Clojure init/layout for Graal
+                         "--features=clj_easy.graal_build_time.InitClojureClasses"
 
-                         "--initialize-at-build-time=java.util.zip"
-                         "--trace-class-initialization=clojure.core.server,clojure.core.server__init"]
+                         ;; 🔧 Helpful Clojure flags for native images
+                         "-Dclojure.compiler.direct-linking=true"
+                         "-Dclojure.spec.skip-macros=true"
+
+                         ;; 🧠 Initialize Clojure runtime at build time
+                         "--initialize-at-build-time=clojure.lang,clojure"
+
+                         "--initialize-at-build-time=java.util.zip"]
+
                         :out :inherit :err :inherit})]
     (if (zero? (:exit res))
       (println "✅ Native image built.")
