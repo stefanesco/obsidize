@@ -2,12 +2,7 @@
   (:require [clojure.tools.build.api :as b]
             [clojure.java.io :as io]
             [clojure.string :as str]
-            [obsidize.data-pack :as sut]
-            [obsidize.data-validation :as validation]
-            [obsidize.incremental-projects :as sut]
-            [obsidize.logging :as sut]
-            [obsidize.templates :as templates]
-            [obsidize.vault-scanner :as vs]))
+            [babashka.fs :as fs]))
 
 (def lib 'stefanesco/obsidize)
 (def version (if-let [tag (System/getenv "RELEASE_VERSION")]
@@ -57,10 +52,10 @@
   (.mkdirs (io/file release-dir))
   (b/copy-dir {:src-dirs ["src" "resources"]
                :target-dir class-dir})
-(b/compile-clj {:basis basis
-                :src-dirs ["src"]
-                :class-dir class-dir
-                :sort :topo})
+  (b/compile-clj {:basis basis
+                  :src-dirs ["src"]
+                  :class-dir class-dir
+                  :sort :topo})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
@@ -71,21 +66,21 @@
   "Run obsidize.core under the Graal tracing agent with given CLI args."
   [basis & cli-args]
   (let [agent (format "-agentlib:native-image-agent=config-output-dir=%s"
-                       native-config-dir)
-        jc    (b/java-command {:basis basis
-                               :java-opts (into (:java-opts basis)
-                                                ["-Dclojure.main.report=stderr" agent])
-                               :main 'clojure.main
-                               :main-args (into ["-m" "obsidize.core"] cli-args)})
-        _     (println "🔎 Tracing cmd:" (clojure.string/join " " (:command-args jc)))
-        res   (b/process (-> jc (assoc :out :inherit :err :inherit)))]
+                      native-config-dir)
+        jc (b/java-command {:basis basis
+                            :java-opts (into (:java-opts basis)
+                                             ["-Dclojure.main.report=stderr" agent])
+                            :main 'clojure.main
+                            :main-args (into ["-m" "obsidize.core"] cli-args)})
+        _ (println "🔎 Tracing cmd:" (clojure.string/join " " (:command-args jc)))
+        res (b/process (-> jc (assoc :out :inherit :err :inherit)))]
     (when-not (zero? (:exit res))
       (println "❌ Tracing run failed with exit" (:exit res))
       (System/exit 1))))
 
 (defn generate-native-config [_]
   (println "🤔 Generating native-image configuration...")
-  
+
   (let [jv (.. (ProcessBuilder. ["java" "-version"])
                (redirectErrorStream true)
                (start))
@@ -95,7 +90,7 @@
       (println "   Ensure GraalVM is active before running tracing:")
       (println "   export JAVA_HOME=<path-to-graalvm>; export PATH=\"$JAVA_HOME/bin:$PATH\"")
       (System/exit 1)))
-  
+
   (b/delete {:path native-config-dir})
   (clojure.java.io/make-parents (str native-config-dir "/_.keep"))
 
@@ -127,15 +122,18 @@
   ;;    and so the just-generated configs are included in the jar.
   (let [native-basis (b/create-basis {:project "deps.edn" :aliases [:native]})]
     (println "📦 Creating uberjar for native image (with :native deps + configs)...")
-    (clean nil)                                 ;; clean target
+    (clean nil) ;; clean target
     (.mkdirs (io/file release-dir))
     (write-version-file nil)
-    (b/copy-dir {:src-dirs ["src" "resources"]   ;; include resources => includes generated configs
+    (b/copy-dir {:src-dirs ["src" "resources"] ;; include resources => includes generated configs
                  :target-dir class-dir})
     (b/compile-clj {:basis native-basis
                     :src-dirs ["src"]
                     :class-dir class-dir
-                    :ns-compile '[obsidize.core]})
+                    :ns-compile '[obsidize.core
+                                  clojure.core.server
+                                  clojure.spec.alpha
+                                  clojure.core.specs.alpha]})
     (b/uber {:class-dir class-dir
              :uber-file uber-file
              :basis native-basis
@@ -158,14 +156,14 @@
                          "--initialize-at-build-time=clojure"
                          "--initialize-at-run-time=clojure.core.server__init"
 
-
-                         ;; ✅ Force these libs to initialize at run time (overrides clj-easy’s package init)
+;; ✅ Force these libs to initialize at run time (overrides clj-easy’s package init)
                          "--initialize-at-run-time=cheshire,com.fasterxml.jackson.core,com.fasterxml.jackson.databind"
                          "--initialize-at-run-time=com.fasterxml.jackson.dataformat.cbor.CBORFactory,com.fasterxml.jackson.dataformat.smile.SmileFactory"
 
-                         "--initialize-at-build-time=java.util.zip"]
+                         "--initialize-at-build-time=java.util.zip"
+                         "--trace-class-initialization=clojure.core.server,clojure.core.server__init"]
                         :out :inherit :err :inherit})]
     (if (zero? (:exit res))
       (println "✅ Native image built.")
-      (do (println "❌ native-image failed with exit" (:exit res)) 
+      (do (println "❌ native-image failed with exit" (:exit res))
           (System/exit (:exit res))))))
