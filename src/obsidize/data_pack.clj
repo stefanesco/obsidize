@@ -52,10 +52,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- extract-zip-entry
-  "Extract a single entry from ZIP file to target directory"
+  "Extract a single entry from ZIP file to target directory with path traversal protection"
   [^ZipFile zip-file ^ZipEntry entry target-dir]
   (let [entry-path (.getName entry)
-        target-file (io/file target-dir entry-path)]
+        target-file (io/file target-dir entry-path)
+        target-dir-canonical (.getCanonicalPath (io/file target-dir))
+        target-file-canonical (.getCanonicalPath target-file)]
+    
+    ;; Security check: Prevent path traversal attacks
+    (when-not (.startsWith target-file-canonical target-dir-canonical)
+      (throw (SecurityException. (str "Path traversal detected in ZIP entry: " entry-path))))
+    
     (when-not (.isDirectory entry)
       (io/make-parents target-file)
       (with-open [input (.getInputStream zip-file entry)

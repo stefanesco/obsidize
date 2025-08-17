@@ -227,7 +227,28 @@
         (let [result (sut/extract-archive (.getAbsolutePath invalid-zip))]
           (is (nil? result)))
         (finally
-          (.delete invalid-zip))))))
+          (.delete invalid-zip)))))
+
+  (testing "Path traversal protection"
+    ;; Create a malicious ZIP with path traversal entries
+    (let [zip-file (io/file (System/getProperty "java.io.tmpdir") (str "malicious-" (System/currentTimeMillis) ".zip"))]
+      (try
+        (with-open [zip-output (java.util.zip.ZipOutputStream. (io/output-stream zip-file))]
+          ;; Add malicious entries that try to escape the extraction directory
+          (.putNextEntry zip-output (java.util.zip.ZipEntry. "../../../etc/passwd"))
+          (.write zip-output (.getBytes "malicious content"))
+          (.closeEntry zip-output)
+          
+          (.putNextEntry zip-output (java.util.zip.ZipEntry. "..\\..\\windows\\system32\\evil.txt"))
+          (.write zip-output (.getBytes "malicious content"))
+          (.closeEntry zip-output))
+
+        ;; Attempt to extract should return nil due to SecurityException being caught
+        (let [result (sut/extract-archive (.getAbsolutePath zip-file))]
+          (is (nil? result) "Path traversal protection should prevent extraction and return nil"))
+        
+        (finally
+          (.delete zip-file))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main Process Data Pack Function Tests

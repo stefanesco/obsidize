@@ -2215,6 +2215,9 @@
       "allPublicFields": true
     },
     {
+      "type": "java.lang.SecurityException"
+    },
+    {
       "type": "java.lang.Short"
     },
     {
