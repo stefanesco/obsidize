@@ -159,13 +159,10 @@
                          "--report-unsupported-elements-at-runtime"
                          "-H:+ReportExceptionStackTraces"
 
-                         ;; ✅ Force these libs to initialize at run time (overrides clj-easy’s package init)
-                         "--initialize-at-run-time=clojure.pprint__init"
-                         "--initialize-at-run-time=clojure.pprint.dispatch__init"
+                         ;; ✅ Force these libs to initialize at build time (overrides clj-easy’s package init)
+                         "--initialize-at-run-time=clojure.pprint__init,clojure.pprint.dispatch__init"
                          "--initialize-at-run-time=clojure.data.json__init"
-                         ;; Build-time: core only
 
-                         
                          ;; 🔑 Let clj-easy configure Clojure init/layout for Graal
                          "--features=clj_easy.graal_build_time.InitClojureClasses"
 
@@ -176,7 +173,8 @@
                          ;; 🧠 Initialize Clojure runtime at build time
                          "--initialize-at-build-time=clojure.lang,clojure"
 
-                         "--initialize-at-build-time=java.util.zip"]
+                         "--initialize-at-build-time=java.util.zip"
+                         "--trace-class-initialization=clojure.data.json__init,clojure.pprint__init,clojure.pprint.dispatch__init"]
 
                         :out :inherit :err :inherit})]
     (if (zero? (:exit res))
