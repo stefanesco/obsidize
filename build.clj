@@ -62,6 +62,118 @@
            :main 'obsidize.core})
   (println (str "✅ Uberjar created: " uber-file)))
 
+;; ---- Platform helpers ----
+(defn- os-name [] (System/getProperty "os.name"))
+(defn- arch [] (System/getProperty "os.arch"))
+
+(defn- platform-id []
+  (let [os (str/lower-case (os-name))
+        a  (str/lower-case (arch))]
+    (cond
+      (and (re-find #"mac|darwin" os) (re-find #"aarch64|arm64" a)) "macos-aarch64"
+      (and (re-find #"mac|darwin" os) (re-find #"x86_64|amd64" a))  "macos-x64"
+      (and (re-find #"win" os) (re-find #"x86_64|amd64" a))         "windows-x64"
+      (re-find #"linux" os)                                        (str "linux-" a)
+      :else (str (clojure.string/replace os #"[^a-z0-9]+" "-") "-" a))))
+
+;; ---- jdeps + jlink flow ----
+(defn- ensure-tool [tool]
+  (when-not (fs/which tool)
+    (println (format "❌ Required tool '%s' not found on PATH." tool))
+    (System/exit 1)))
+
+(defn- jdeps-mods [jar]
+  (ensure-tool "jdeps")
+  (let [args ["jdeps" "--multi-release" "21" "--print-module-deps" jar]
+        res  (b/process {:command-args args :out :capture :err :inherit})
+        out  (str/trim (:out res))]
+    (when-not (zero? (:exit res))
+      (println "❌ jdeps failed.")
+      (System/exit 1))
+    (if (str/blank? out)
+      "java.base"
+      out)))
+
+(defn- write-file! [path content]
+  (clojure.java.io/make-parents path)
+  (spit path content)
+  (fs/set-posix-file-permissions path "rwxr-xr-x"))
+
+(defn jlink-image [_]
+  (println "🔧 Building jlink runtime image...")
+  (when-not (fs/exists? uber-file)
+    (println "ℹ️  Uberjar not found, building it...")
+    (uber nil))
+
+  (ensure-tool "jlink")
+  (let [mods (jdeps-mods uber-file)
+        out-dir (format "%s/%s-%s" release-dir "obsidize" (platform-id))]
+    (println "🧩 Modules:" mods)
+    (rm-rf out-dir)
+    (let [args ["jlink"
+                "--strip-debug"
+                "--no-header-files"
+                "--no-man-pages"
+                "--compress=zip-6"
+                "--add-modules" mods
+                "--output" out-dir]]
+      (println "🚚 Running jlink...")
+      (let [res (b/process {:command-args args :out :inherit :err :inherit})]
+        (when-not (zero? (:exit res))
+          (println "❌ jlink failed.")
+          (System/exit 1))))
+
+    ;; Place application jar & launcher into image
+    (println "📁 Finalizing image layout...")
+    (let [app-dir (str out-dir "/app")
+          bin-dir (str out-dir "/bin")]
+      (fs/create-dirs app-dir)
+      (fs/copy uber-file (str app-dir "/" (fs/file-name uber-file)) {:replace-existing true})
+
+      ;; POSIX launcher
+      (let [launcher (str bin-dir "/" artifact)
+            script   (format "#!/usr/bin/env bash
+DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
+\"$DIR/java\" -jar \"$DIR/../app/%s\" \"$@\"\n"
+                             (fs/file-name uber-file))]
+        (write-file! launcher script))
+
+      ;; Windows launcher
+      (let [launcher (str bin-dir "/" artifact ".cmd")
+            script   (format "@echo off\r\nset DIR=%%~dp0\r\n\"%%DIR%%java.exe\" -jar \"%%DIR%%..\\app\\%s\" %%*\r\n"
+                             (fs/file-name uber-file))]
+        (write-file! launcher script)))
+
+    (println (str "✅ jlink runtime image created at: " out-dir))
+    ;; Archive it
+    (let [archive-base (format "%s-%s-%s" artifact version (platform-id))
+          archive-tgz (str archive-base ".tar.gz")
+          archive-zip (str archive-base ".zip")
+          parent-dir   (str (fs/parent out-dir)) 
+          out-name     (fs/file-name out-dir)]
+      (when (re-find #"windows" (platform-id))
+        ;; zip on windows
+        (ensure-tool "zip")
+        (println "🗜️  Creating ZIP archive: " archive-zip " from " out-name " in: " parent-dir)
+        (let [res (b/process {:command-args ["zip" "-r" archive-zip out-name]
+                              :dir parent-dir
+                              :out :inherit :err :inherit})]
+          (when-not (zero? (:exit res))
+            (println "❌ zip failed.")
+            (System/exit 1))
+          (println "📦" archive-zip)))
+      
+      (when-not (re-find #"windows" (platform-id))
+        (ensure-tool "tar")
+        (println "🗜️  Creating tar.gz archive:" archive-tgz " from " out-name " in: " parent-dir)
+        (let [res (b/process {:command-args ["tar" "-czf" archive-tgz out-name]
+                              :dir parent-dir
+                              :out :inherit :err :inherit})]
+          (when-not (zero? (:exit res))
+            (println "❌ tar failed.")
+            (System/exit 1))
+          (println "📦" archive-tgz))))))
+
 (defn- run-with-agent
   "Run obsidize.core under the Graal tracing agent with given CLI args."
   [basis & cli-args]

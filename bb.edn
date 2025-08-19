@@ -38,7 +38,7 @@
                  (println "⚠️  Clojure linting completed with warnings (non-blocking).")
                  (throw e)))))}
 
-;; ---
+  ;; ---
   ;; TESTING TASKS
   ;; ---
   test
@@ -78,7 +78,7 @@
   {:doc "Parse Trivy report for vulnerabilities and license issues, then fail if needed."
    :depends [trivy-scan]
    :task
-   (let [report (-> "target/trivy-report.json" slurp (json/read-str { :key-fn keyword}))
+   (let [report (-> "target/trivy-report.json" slurp (json/read-str {:key-fn keyword}))
          results (get-in report [:Results] [])
          disallowed-licenses #{}
 
@@ -125,7 +125,6 @@
   ci
   {:doc "Run the full CI pipeline: install dependencies and run all checks."
    :depends [init lint test verify]}
-
   ;; ---
   ;; PACKAGING & RELEASE TASKS
   ;; ---
@@ -133,6 +132,10 @@
   {:doc "Build a standalone uberjar of the application."
    :override-builtin true
    :task (shell "clojure -T:build uber")}
+  
+  jlink
+  {:doc "Create jlink runtime image and archive."
+   :task (shell "clojure -T:build jlink-image")}
 
   native-prereqs
   {:doc "Check for GraalVM native-image prerequisites."
@@ -149,4 +152,6 @@
 
   package
   {:doc "Run the full packaging pipeline to create a native executable."
-   :depends [clean ci uberjar native-image]}}}
+   :depends [clean ci uberjar jlink]
+   :task (when (fs/which "native-image")
+            (shell "clojure -T:build native-image"))}}}
