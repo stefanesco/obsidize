@@ -80,7 +80,7 @@
   "Log detailed runtime environment information"
   []
   (let [env (detect-runtime-environment)]
-    (log-info (str "Runtime Environment:"))
+    (log-info "Runtime Environment:")
     (log-info (str "  Native Image: " (:native-image? env)))
     (when (:vm-name env)
       (log-info (str "  VM: " (:vm-name env) " " (:vm-version env))))

@@ -70,7 +70,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-trivy-
 
-      - name: Set up GraalVM
+      - name: Set up GraalVM (for native-image and jlink tools)
         uses: graalvm/setup-graalvm@v1
         with:
           java-version: '21'
@@ -112,65 +112,59 @@ jobs:
       - name: Set Release Version Env
         run: echo "RELEASE_VERSION=${{ github.event.inputs.version || github.ref_name }}" >> $GITHUB_ENV
 
-      # --- Native image build (unchanged) ---
-      - name: Build native executable
+      # Build everything (tests, uberjar, native-image, jlink image + archives)
+      - name: Build (bb package)
         run: bb package
 
-      - name: Prepare Native Release Artifacts
+      # --- Upload native-only tarballs (binary + checksum) ---
+      - name: Stage native artifact
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(echo "$RELEASE_VERSION" | sed 's/^v//')"
           RELEASE_DIR="target/release/$VERSION"
-
           STAGE_DIR="$(mktemp -d)"
           install -m 0755 "$RELEASE_DIR/obsidize" "$STAGE_DIR/obsidize"
-
-          TAR_NAME="obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz"
-          tar -C "$STAGE_DIR" -czf "$TAR_NAME" obsidize
-
-          shasum -a 256 "$TAR_NAME" | awk '{print $1}' > "SHA256-${{ matrix.arch }}-${{ runner.os }}"
-
-      - name: Upload Native Assets
+          TAR="obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz"
+          tar -C "$STAGE_DIR" -czf "$TAR" obsidize
+          shasum -a 256 "$TAR" | awk '{print $1}' > "SHA256-${{ matrix.arch }}-${{ runner.os }}"
+      - name: Upload native artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-assets-${{ matrix.arch }}-${{ runner.os }}
+          name: native-${{ matrix.os_id }}-${{ matrix.arch }}
           path: |
             obsidize-${{ matrix.arch }}-${{ runner.os }}.tar.gz
             SHA256-${{ matrix.arch }}-${{ runner.os }}
           if-no-files-found: error
           retention-days: 7
 
-      # --- JLINK build (new) ---
-      - name: Build jlink runtime image
-        run: bb jlink
-
-      - name: Upload jlink Assets
+      # --- Upload jlink archives produced by build.clj (lives in target/release/<version>/) ---
+      - name: Locate jlink archive(s)
+        id: jlink_paths
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(echo "$RELEASE_VERSION" | sed 's/^v//')"
           RELEASE_DIR="target/release/$VERSION"
-
-          # Expect archives named by build.clj as: obsidize-${VERSION}-${{ matrix.os_id }}-${{ matrix.arch }}.tar.gz
-          # Adjust the glob if your build script names slightly differently.
-          JLINK_GLOB="$RELEASE_DIR/obsidize-${VERSION}-${{ matrix.os_id }}-${{ matrix.arch }}.*"
-          echo "Looking for jlink archives: $JLINK_GLOB"
-          ls -l $JLINK_GLOB
-
-          # Upload as a distinct artifact so it's easy to identify
-          echo "artifact_path=$JLINK_GLOB" >> $GITHUB_OUTPUT
-        id: jlink_paths
-
-      - name: Upload jlink artifact (archive)
+          echo "Searching jlink archives in $RELEASE_DIR"
+          ls -l "$RELEASE_DIR" || true
+          # Our build writes: obsidize-<version>-<platform-id>.tar.gz|zip
+          # Each matrix build produces exactly one for its platform.
+          FILE="$(ls "$RELEASE_DIR"/obsidize-"$VERSION"-* 2>/dev/null | head -n1 || true)"
+          if [[ -z "$FILE" ]]; then
+            echo "No jlink archive found in $RELEASE_DIR"
+            exit 1
+          fi
+          echo "archive=$FILE" >> "$GITHUB_OUTPUT"
+      - name: Upload jlink archive
         uses: actions/upload-artifact@v4
         with:
           name: jlink-${{ matrix.os_id }}-${{ matrix.arch }}
-          path: ${{ steps.jlink_paths.outputs.artifact_path }}
+          path: ${{ steps.jlink_paths.outputs.archive }}
           if-no-files-found: error
           retention-days: 7
 
-  # Optional: Windows jlink build (no native-image here)
+  # Windows jlink-only (no native-image)
   build-jlink-windows:
     name: Build Windows (jlink)
     runs-on: windows-latest
@@ -201,21 +195,19 @@ jobs:
         shell: pwsh
         run: echo "RELEASE_VERSION=${{ github.event.inputs.version || github.ref_name }}" >> $env:GITHUB_ENV
 
-      - name: Build jlink runtime image (Windows)
+      - name: Build jlink image (bb jlink)
         shell: pwsh
         run: bb jlink
 
-      - name: Upload jlink Windows Asset
+      - name: Upload Windows jlink archive
         shell: pwsh
         run: |
           $version = "${{ env.RELEASE_VERSION }}".TrimStart('v')
           $releaseDir = "target/release/$version"
-          # Expect a zip produced by build.clj on Windows:
           $zip = Get-ChildItem $releaseDir -Filter "obsidize-$version-windows-*.zip" | Select-Object -First 1
-          if (-not $zip) { throw "No jlink Windows zip found in $releaseDir" }
+          if (-not $zip) { throw "No Windows jlink zip found in $releaseDir" }
           echo "archive=$($zip.FullName)" >> $env:GITHUB_OUTPUT
         id: win_jlink
-
       - name: Upload jlink artifact (Windows)
         uses: actions/upload-artifact@v4
         with:
@@ -231,44 +223,47 @@ jobs:
       - build-release
       - build-jlink-windows
     steps:
-      - name: Download all release assets
+      - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
           pattern: '*'
           merge-multiple: true
+
+      - name: List downloaded files
+        run: ls -R
 
       - name: Create GitHub Release
         if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            # native:
+            # native (per-arch tarball)
             obsidize-*.tar.gz
             SHA256-*
-            # jlink:
-            obsidize-*-macOS-*.tar.gz
-            obsidize-*-Linux-*.tar.gz
-            obsidize-*-windows-*.zip
+            # jlink (from target/release/<version>/...)
+            target/release/*/obsidize-*.tar.gz
+            target/release/*/obsidize-*.zip
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-homebrew:
-    name: Update Homebrew Tap
+    name: Update Homebrew Tap (use jlink tarballs)
     runs-on: ubuntu-latest
     needs: release
     if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
     steps:
-      - name: Download release assets (keep separated)
+      - name: Download jlink artifacts
         uses: actions/download-artifact@v5
         with:
-          pattern: release-assets-*
-          merge-multiple: false
+          # We only need the jlink archives for macOS (both arches). Linux bottle optional.
+          pattern: jlink-*
+          merge-multiple: true
           path: artifacts
 
-      - name: Prepare env and derive SHAs/URLs
-        id: formula-env
+      - name: Compute SHAs & URLs for Homebrew
+        id: brewinfo
         shell: bash
         run: |
           set -euo pipefail
@@ -276,39 +271,38 @@ jobs:
           TAG_NAME="${{ github.event.inputs.version || github.ref_name }}"
           VERSION="${TAG_NAME#v}"
           REPO="${{ github.repository }}"
+
           echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "REPO=$REPO" >> "$GITHUB_ENV"
 
           echo "Artifacts tree:"; ls -R artifacts || true
 
-          ARM64_MAC_DIR="$(find artifacts -maxdepth 1 -type d -name 'release-assets-arm64-macOS' -print -quit || true)"
-          AMD64_MAC_DIR="$(find artifacts -maxdepth 1 -type d -name 'release-assets-amd64-macOS' -print -quit || true)"
-          if [[ -z "$ARM64_MAC_DIR" || -z "$AMD64_MAC_DIR" ]]; then
-            echo "Expected macOS artifacts not found. Found:"; find artifacts -maxdepth 1 -type d -print
+          # Find macOS jlink tarballs built by each mac matrix:
+          ARM_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
+          AMD_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
+
+          if [[ -z "$ARM_TGZ" || -z "$AMD_TGZ" ]]; then
+            echo "Missing macOS jlink tarballs. Found:"; find artifacts -type f -maxdepth 2 -name "obsidize-*.tar.gz" -print
             exit 1
           fi
 
-          ARM64_SHA_FILE="$ARM64_MAC_DIR/SHA256-arm64-macOS"
-          AMD64_SHA_FILE="$AMD64_MAC_DIR/SHA256-amd64-macOS"
-          [[ -f "$ARM64_SHA_FILE" ]] || { echo "Missing $ARM64_SHA_FILE"; exit 1; }
-          [[ -f "$AMD64_SHA_FILE" ]] || { echo "Missing $AMD64_SHA_FILE"; exit 1; }
+          ARM_SHA="$(shasum -a 256 "$ARM_TGZ" | awk '{print $1}')"
+          AMD_SHA="$(shasum -a 256 "$AMD_TGZ" | awk '{print $1}')"
 
-          ARM64_SHA="$(tr -d '[:space:]' < "$ARM64_SHA_FILE")"
-          AMD64_SHA="$(tr -d '[:space:]' < "$AMD64_SHA_FILE")"
-          echo "ARM64_SHA=$ARM64_SHA" >> "$GITHUB_ENV"
-          echo "AMD64_SHA=$AMD64_SHA" >> "$GITHUB_ENV"
+          echo "ARM64_SHA=$ARM_SHA" >> "$GITHUB_ENV"
+          echo "AMD64_SHA=$AMD_SHA" >> "$GITHUB_ENV"
 
-          # Optional Linux Homebrew support
-          LINUX_AMD_DIR="$(find artifacts -maxdepth 1 -type d -name 'release-assets-amd64-Linux' -print -quit || true)"
-          if [[ -n "$LINUX_AMD_DIR" && -f "$LINUX_AMD_DIR/SHA256-amd64-Linux" ]]; then
-            LINUX_AMD_SHA="$(tr -d '[:space:]' < "$LINUX_AMD_DIR/SHA256-amd64-Linux")"
+          echo "ARM64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$ARM_TGZ")" >> "$GITHUB_ENV"
+          echo "AMD64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$AMD_TGZ")" >> "$GITHUB_ENV"
+
+          # Optional Linux (amd64) jlink tarball
+          LINUX_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-linux-amd64.tar.gz" -print -quit || true)"
+          if [[ -n "$LINUX_TGZ" ]]; then
+            LINUX_AMD_SHA="$(shasum -a 256 "$LINUX_TGZ" | awk '{print $1}')"
             echo "LINUX_AMD_SHA=$LINUX_AMD_SHA" >> "$GITHUB_ENV"
+            echo "LINUX_AMD_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$LINUX_TGZ")" >> "$GITHUB_ENV"
           fi
-
-          echo "ARM64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-arm64-macOS.tar.gz" >> "$GITHUB_ENV"
-          echo "AMD64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-macOS.tar.gz" >> "$GITHUB_ENV"
-          echo "LINUX_AMD_URL=https://github.com/$REPO/releases/download/$TAG_NAME/obsidize-amd64-Linux.tar.gz" >> "$GITHUB_ENV"
 
       - name: Clone Homebrew tap
         env:
@@ -319,7 +313,7 @@ jobs:
           : "${HOMEBREW_TAP_REPO:?HOMEBREW_TAP_REPO is required}"
           git clone "https://github.com/${HOMEBREW_TAP_REPO}" tap
 
-      - name: Generate formula
+      - name: Generate formula (jlink archive installs)
         shell: bash
         working-directory: tap
         env:
@@ -337,7 +331,7 @@ jobs:
 
           cat > Formula/obsidize.rb <<'RUBY'
           class Obsidize < Formula
-            desc "A simple Clojure CLI tool"
+            desc "Claude to Obsidian converter"
             homepage "https://github.com/REPO_PLACEHOLDER"
             license "AGPL-3.0"
             version "VERSION_PLACEHOLDER"
@@ -361,7 +355,18 @@ jobs:
             end
 
             def install
-              bin.install "obsidize"
+              # jlink image layout:
+              #   obsidize-<platform>/
+              #     bin/java
+              #     bin/obsidize
+              #     (macOS tarball may also include bin/obsidize-native)
+              #     app/obsidize-standalone.jar
+              libexec.install Dir["*"]
+              bin.install_symlink libexec/"bin/obsidize"
+              # optional native symlink if present
+              if (libexec/"bin/obsidize-native").exist?
+                bin.install_symlink libexec/"bin/obsidize-native"
+              end
             end
 
             test do
@@ -382,6 +387,7 @@ jobs:
             Formula/obsidize.rb
           rm -f Formula/obsidize.rb.bak
 
+          # If we didn't publish Linux, strip the on_linux stanza for cleanliness
           if [[ -z "${LINUX_AMD_SHA:-}" ]]; then
             awk '
               /on_linux do/ {skip=1}
