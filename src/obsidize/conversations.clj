@@ -1,7 +1,7 @@
 #!/usr/bin/env bb
 
 (ns obsidize.conversations
-  "Functions for processing conversations and generating markdown notes." 
+  "Functions for processing conversations and generating markdown notes."
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [obsidize.templates :as templates]
@@ -46,7 +46,16 @@
         title (if (str/blank? name)
                 (generate-title-for-nameless-convo (first safe-chats))
                 name)
-        obsidized-at (utils/current-timestamp)
+        ;; FIXED: Use the timestamp of the latest message for obsidized_at
+        ;; This ensures incremental updates work correctly
+        latest-message-time (if (seq safe-chats)
+                              (->> safe-chats
+                                   (map :create_time)
+                                   (filter some?)
+                                   (sort)
+                                   (last))
+                              nil)
+        obsidized-at (or latest-message-time (utils/current-timestamp))
         tags (utils/normalize-list-option (:tags options))
         links (utils/normalize-list-option (:links options))
 
@@ -81,22 +90,38 @@
      :filename (utils/sanitize-filename filename)
      :content (templates/format-conversation-content frontmatter title chat-messages)}))
 
+(defn extract-existing-message-signatures
+  "Extract message signatures from existing file content to detect what's already present.
+   Returns a set of message signatures in the format 'timestamp::question'."
+  [content]
+  (let [message-pattern #"\*\*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z) Me:\*\* (.+)"
+        matches (re-seq message-pattern content)]
+    (->> matches
+         (map (fn [[_ timestamp question]]
+                (str timestamp "::" (str/trim question))))
+         (set))))
+
 (defn determine-new-messages
   "Given full conversation and existing file content, returns:
    {:new-messages [...], :messages-md \"...\"} when there are new messages after
-   the file's :obsidized_at timestamp. Returns nil if none or corrupted."
+   the file's :obsidized_at timestamp and not already present in the file.
+   Respects user deletions by not re-adding deleted messages."
   [conversation existing-note-content]
   (let [parsed (vault-scanner/extract-frontmatter existing-note-content)
         frontmatter (vault-scanner/parse-simple-yaml (:frontmatter parsed))
         obsidized-at-str (:obsidized_at frontmatter)
         obsidized-at (vault-scanner/parse-timestamp obsidized-at-str)]
     (if obsidized-at
-      (let [new-messages (->> (:chats conversation)
-                              (filter (fn [{:keys [create_time]}]
-                                        (when create_time
-                                          (let [msg-time (vault-scanner/parse-timestamp create_time)]
+      (let [existing-signatures (extract-existing-message-signatures existing-note-content)
+            new-messages (->> (:chats conversation)
+                              (filter (fn [{:keys [create_time q]}]
+                                        (when (and create_time q)
+                                          (let [msg-time (vault-scanner/parse-timestamp create_time)
+                                                signature (str create_time "::" (str/trim q))]
                                             (and msg-time
-                                                 (.isAfter msg-time obsidized-at))))))
+                                                 (.isAfter msg-time obsidized-at)
+                                                 ;; ENHANCED: Only include if not already present (respects user deletions)
+                                                 (not (contains? existing-signatures signature)))))))
                               (sort-by :create_time))]
         (when (seq new-messages)
           {:new-messages new-messages

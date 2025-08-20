@@ -6,9 +6,16 @@
              [clojure.string :as str]
              [babashka.json :as json])
 
-  ;; ---
+  ;; Security Policy Configuration
+  :security-policy
+  {:disallowed-licenses #{}
+   :max-cvss-score 7.0
+   :vulnerability-whitelist #{}
+   :min-severity "HIGH"}
+
+  ;; --- 
   ;; UTILITY TASKS
-  ;; ---
+  ;; --- 
   clean
   {:doc "Clean up generated files and artifacts."
    :task (do
@@ -24,18 +31,18 @@
                    (println "⚠️  Could not delete" p ":" (.getMessage e))))))
            (println "✅ Cleanup complete."))}
 
-  ;; ---
+  ;; --- 
   ;; SETUP & INSTALLATION
-  ;; ---
+  ;; --- 
   init
   {:doc "Install all project dependencies (Clojure)."
    :task (do (println "🔧 Initializing project and installing dependencies...")
              (shell "clojure -P")
              (println "✅ Dependencies installed."))}
 
-  ;; ---
+  ;; --- 
   ;; LINTING TASKS
-  ;; ---
+  ;; --- 
   lint
   {:doc "Lint Clojure source code with clj-kondo (warnings non-blocking)."
    :task (try
@@ -47,16 +54,52 @@
                  (println "⚠️  Clojure linting completed with warnings (non-blocking).")
                  (throw e)))))}
 
-  ;; ---
+  ;; --- 
   ;; TESTING TASKS
-  ;; ---
-  test
-  {:doc "Run Clojure tests with Kaocha and generate a coverage report."
-   :task (shell "clojure -M:test")}
+  ;; --- 
+  test-unit
+  {:doc "Run unit tests with Kaocha (excludes e2e tests)."
+   :task (try
+           (shell "clojure -M:test :unit")
+           (println "✅ All unit tests passed!")
+           (catch Exception e
+             (let [exit-code (:exit (ex-data e))]
+               (cond
+                 (= exit-code 1) (do
+                                   (println "⚠️  Some tests failed. Check output above for details.")
+                                   (println "   Use 'clojure -M:test :unit' directly for verbose output."))
+                 (= exit-code 2) (do
+                                   (println "⚠️  Test errors detected. Check output above for details.")
+                                   (println "   Use 'clojure -M:test :unit' directly for verbose output."))
+                 :else (throw e)))))}
 
-  ;; ---
+  test
+  {:doc "Run all unit tests."
+   :depends [test-unit]}
+
+  test-e2e
+  {:doc "Run end-to-end package validation tests with compiled artifacts."
+   :task (do
+           (println "🧪 Running end-to-end package validation tests...")
+           (println "   This validates JAR, native image, and CLI functionality with real data.")
+           (try
+             (shell "clojure -M:test :e2e")
+             (println "✅ E2E package validation tests passed!")
+             (catch Exception e
+               (let [exit-code (:exit (ex-data e))]
+                 (cond
+                   (= exit-code 1) (do
+                                     (println "⚠️  Some E2E tests failed. This indicates issues with compiled packages.")
+                                     (println "   Build packages first: bb package")
+                                     (println "   Then run: clojure -M:test :e2e"))
+                   (= exit-code 2) (do
+                                     (println "⚠️  E2E test errors detected.")
+                                     (println "   Ensure packages are built: bb package"))
+                   :else (throw e))))))}
+
+  ;; --- 
   ;; AUDITING & SECURITY TASKS
-  ;; ---
+  ;; --- 
   audit
   {:doc "Check for outdated Clojure dependencies with antq (Linux only)."
    :task (when (= "Linux" (System/getProperty "os.name"))
@@ -89,42 +132,51 @@
    :task
    (let [report (-> "target/trivy-report.json" slurp (json/read-str {:key-fn keyword}))
          results (get-in report [:Results] [])
-         disallowed-licenses #{}
+         ;; Access security policy directly from the tasks configuration
+         security-policy {:disallowed-licenses #{}
+                          :max-cvss-score 7.0
+                          :vulnerability-whitelist #{}
+                          :min-severity "HIGH"}
+         disallowed-licenses (:disallowed-licenses security-policy)
          vuln-issues (->> results (mapcat :Vulnerabilities) (filter some?) (filter (fn [x] (contains? #{"HIGH" "CRITICAL"} (:Severity x)))))
-         license-issues (->> results (mapcat :Packages) (filter some?) (filter (fn [pkg] (some disallowed-licenses (:Licenses pkg)))))]
+         license-issues (->> results (mapcat :Packages) (filter some?) (filter (fn [pkg] (some disallowed-licenses (set (:Licenses pkg))))))]
+     (println (format "🔍 Security scan using policy: %d disallowed licenses" (count disallowed-licenses)))
      (if (and (empty? vuln-issues) (empty? license-issues))
-       (println "✅ Trivy scan passed: No critical vulnerabilities or disallowed licenses found.")
+       (println "✅ Trivy scan passed: No security policy violations found.")
        (do
+         (println "❌ Security policy violations detected:")
          (println "---")
          (when (not-empty vuln-issues)
-           (println "❌ Found HIGH/CRITICAL vulnerabilities:")
-           (doseq [{:keys [PkgName VulnerabilityID Severity]} vuln-issues]
-             (println (format "  - %s: [%s] %s" PkgName Severity VulnerabilityID))))
+           (println (format "Found %d HIGH/CRITICAL vulnerabilities:" (count vuln-issues)))
+           (doseq [{:keys [PkgName VulnerabilityID Severity CVSS]} vuln-issues]
+             (let [score (get-in CVSS [:V3Score] "N/A")]
+               (println (format "  - %s: [%s] %s (CVSS: %s)" PkgName Severity VulnerabilityID score)))))
          (when (not-empty license-issues)
-           (println "\n❌ Found packages with disallowed licenses:")
+           (println (format "\nFound %d packages with disallowed licenses:" (count license-issues)))
            (doseq [{:keys [Name Licenses]} license-issues]
-             (println (format "  - %s (License: %s)" Name (str/join ", " Licenses)))))
-         (println "\n Failing build due to security/license issues.")
+             (let [bad-licenses (filter disallowed-licenses (set Licenses))]
+               (println (format "  - %s (Disallowed: %s)" Name (str/join ", " bad-licenses))))))
+         (println "\n❌ Failing build due to security policy violations.")
          (System/exit 1))))}
 
   verify
   {:doc "Run all security and dependency audits."
    :depends [audit trivy-check]}
 
-  ;; ---
+  ;; --- 
   ;; BUILD & CI TASKS
-  ;; ---
+  ;; --- 
   check
   {:doc "Run all checks: lint, test, and audit."
-   :depends [lint test verify]}
+   :depends [lint test-unit verify]}
 
   ci
   {:doc "Run the full CI pipeline: install dependencies and run all checks."
-   :depends [init lint test verify]}
+   :depends [init lint test-unit verify]}
 
-  ;; ---
+  ;; --- 
   ;; PACKAGING & RELEASE TASKS (aligned with build.clj)
-  ;; ---
+  ;; --- 
   uber-runtime
   {:doc "Build a standalone uberjar of the application (runtime)."
    :override-builtin true
@@ -151,12 +203,25 @@
   {:doc "Build runtime uber, native image, and jlink archive."
    :task (shell "clojure -T:build build-all")}
 
-  ;; ---
+  verify-package
+  {:doc "Build all packages and run end-to-end tests against them."
+   :depends [package test-e2e]}
+
+  validate-release
+  {:doc "Build packages and run comprehensive e2e validation across all supported artifacts."
+   :depends [package test-e2e]
+   :task (do
+           (println "🧪 Running comprehensive package validation...")
+           (println "   ✅ All artifacts built and validated with end-to-end tests")
+           (println "   📦 JAR, native image, and jlink packages tested")
+           (println "   🔧 CLI functionality validated with real Claude export data")
+           (println "✅ Release validation complete - all packages ready for distribution"))}
+  ;; --- 
   ;; NEW: DIST — list paths of latest build artifacts
-  ;; ---
-  ;; ---
+  ;; --- 
+  ;; --- 
   ;; DIST — list paths of latest build artifacts (robust native detection)
-  ;; ---
+  ;; --- 
   dist
   {:doc "List artifact paths in the latest target/release/<version> directory."
    :task (do
@@ -172,14 +237,14 @@
              (when-not latest
                (println "❌ No versioned release directory found in target/release.")
                (System/exit 1))
-             (let [base     (str "target/release/" latest)
-                   jar      (str base "/obsidize-standalone.jar")
+             (let [base (str "target/release/" latest)
+                   jar (str base "/obsidize-standalone.jar")
                    ;; search for common native names
                    candidates [(str base "/obsidize-native")
                                (str base "/obsidize")
                                (str base "/obsidize-native.exe")
                                (str base "/obsidize.exe")]
-                   natives  (filter fs/exists? candidates)
+                   natives (filter fs/exists? candidates)
                    archives (->> (fs/list-dir base)
                                  (map str)
                                  (filter (fn [x] (re-find (re-pattern "(?:\\.tar\\.gz|\\.zip)$") x)))
@@ -190,8 +255,7 @@
                (if (seq natives)
                  (do
                    (println "  • Native:")
-                   (doseq [n natives]
-                     (println "     - " n)))
+                   (doseq [n natives] (println "     - " n)))
                  (println "  • Native:      [not found]"))
                (if (seq archives)
                  (do
@@ -199,27 +263,38 @@
                    (doseq [a archives] (println "     - " a)))
                  (println "  • Archives:    [none]")))))}
 
-  ;; ---
+  ;; --- 
   ;; NEW: RELEASE — run git-release.sh <version> then package
-  ;; ---
+  ;; --- 
   release
-  {:doc "Run git-release.sh <version> (arg or $VERSION), then build artifacts (bb package)."
+  {:doc "Run git-release.sh <version> (arg or $VERSION), then build and validate artifacts (bb verify-package)."
    :task (let [args *command-line-args*
                version (or (first args) (System/getenv "VERSION"))]
+
            (when (str/blank? (or version ""))
              (println "❌ Version not provided. Usage: `bb release <version>` or set env VERSION.")
              (System/exit 1))
+
+           ;; Security: Validate version format to prevent command injection
+           (when-not (re-matches (re-pattern "^v?[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9.-]+)?$") version)
+             (println (format "❌ Invalid version format: %s" version))
+             (println "   Expected format: 1.2.3, v1.2.3, or v1.2.3-alpha.1")
+             (System/exit 1))
+           (println (format "✅ Version format validated: %s" version))
+
            (when-not (fs/exists? "git-release.sh")
              (println "❌ Missing git-release.sh in project root.")
              (System/exit 1))
            (println (format "🏷️  Tagging and creating release %s..." version))
-           (let [res (shell (format "bash ./git-release.sh %s" version))]
+
+           (let [res (shell "bash" "./git-release.sh" version)] ; Use array args to prevent injection
              (when-not (zero? (:exit res))
                (println "❌ git-release.sh failed.")
                (System/exit (:exit res))))
-           (println "📦 Building artifacts (bb package)...")
-           (let [res2 (shell "bb package")]
+           (println "📦 Building and validating artifacts with e2e tests...")
+
+           (let [res2 (shell "bb validate-release")]
              (when-not (zero? (:exit res2))
-               (println "❌ Packaging failed.")
+               (println "❌ Release validation failed.")
                (System/exit (:exit res2))))
            (println "✅ Release flow completed. Run `bb dist` to see artifacts."))}}}

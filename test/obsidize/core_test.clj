@@ -82,6 +82,7 @@
                    (with-out-str (sut/-main "--help")))]
       (is (str/includes? output "OBSIDIZE"))
       (is (str/includes? output "USAGE EXAMPLES"))
+      ;; Exit 0 because --help was explicitly requested
       (is (= 0 @exit-code)))))
 
 (deftest main-no-args-test
@@ -91,7 +92,8 @@
                    (with-out-str (sut/-main)))]
       (is (str/includes? output "OBSIDIZE"))
       (is (str/includes? output "USAGE EXAMPLES"))
-      (is (= 0 @exit-code)))))
+      ;; Exit 1 because no required --input argument was provided (user error)
+      (is (= 1 @exit-code)))))
 
 (deftest main-only-verbose-test
   (testing "-main with only --verbose shows help"
@@ -100,14 +102,16 @@
                    (with-out-str (sut/-main "--verbose")))]
       (is (str/includes? output "OBSIDIZE"))
       (is (str/includes? output "USAGE EXAMPLES"))
-      (is (= 0 @exit-code))))
+      ;; Exit 1 because no required --input argument was provided (user error)
+      (is (= 1 @exit-code))))
   (testing "-main with only -v shows help"
     (let [exit-code (atom nil)
           output (with-redefs [sut/exit (fn [c] (reset! exit-code c))]
                    (with-out-str (sut/-main "-v")))]
       (is (str/includes? output "OBSIDIZE"))
       (is (str/includes? output "USAGE EXAMPLES"))
-      (is (= 0 @exit-code)))))
+      ;; Exit 1 because no required --input argument was provided (user error)
+      (is (= 1 @exit-code)))))
 
 (deftest main-version-flag-test
   (testing "-main with --version flag"

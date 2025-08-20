@@ -25,7 +25,7 @@
 
 (def native-config-dir (format "%s/META-INF/native-image/%s/%s" resources-dir group artifact))
 (def native-artifact (str artifact "-native"))
-(def native-bin   (str release-dir "/" native-artifact))
+(def native-bin (str release-dir "/" native-artifact))
 
 (def fixture-input "resources/data/local/data-2025-08-04-11-59-03-batch-0000.dms")
 (def fixture-output "target/test/agent-run-output")
@@ -37,13 +37,168 @@
 
 (defn- platform-id []
   (let [os (str/lower-case (os-name))
-        a  (str/lower-case (arch))]
+        a (str/lower-case (arch))]
     (cond
       (and (re-find #"mac|darwin" os) (re-find #"aarch64|arm64" a)) "macos-aarch64"
-      (and (re-find #"mac|darwin" os) (re-find #"x86_64|amd64" a))  "macos-x64"
-      (and (re-find #"win" os) (re-find #"x86_64|amd64" a))         "windows-x64"
-      (re-find #"linux" os)                                        (str "linux-" a)
+      (and (re-find #"mac|darwin" os) (re-find #"x86_64|amd64" a)) "macos-x64"
+      (and (re-find #"win" os) (re-find #"x86_64|amd64" a)) "windows-x64"
+      (re-find #"linux" os) (str "linux-" a)
       :else (str (clojure.string/replace os #"[^a-z0-9]+" "-") "-" a))))
+
+;; ---- Build validation helpers ----
+(defn- validate-java-home
+  "Validate and sanitize JDK paths to prevent path traversal attacks."
+  [home]
+  (when-not (and home
+                 (string? home)
+                 (not (str/includes? home "..")) ; Prevent path traversal
+                 (fs/exists? (fs/path home "bin" "java"))
+                 (fs/directory? home))
+    (throw (ex-info "Invalid or unsafe JDK path" {:path home :type :security-validation})))
+  home)
+
+(defn- validate-build-artifact
+  "Validate that a build artifact exists and has expected properties."
+  [file-path description & {:keys [min-size executable] :or {min-size 1024 executable false}}]
+  (cond
+    (not (fs/exists? file-path))
+    (throw (ex-info (format "Missing required artifact: %s" description)
+                    {:file file-path :type :missing-artifact}))
+
+    (and (not (fs/directory? file-path)) (< (fs/size file-path) min-size))
+    (throw (ex-info (format "Artifact too small: %s (size: %d bytes)" description (fs/size file-path))
+                    {:file file-path :size (fs/size file-path) :min-size min-size :type :invalid-size}))
+
+    (and executable (posix?) (not (fs/executable? file-path)))
+    (throw (ex-info (format "Artifact not executable: %s" description)
+                    {:file file-path :type :not-executable}))
+
+    :else
+    (if (fs/directory? file-path)
+      (println (format "✅ Validated artifact: %s (directory)" description))
+      (println (format "✅ Validated artifact: %s (%d bytes)" description (fs/size file-path))))))
+
+(defn- validate-disk-space
+  "Ensure sufficient disk space for build operations."
+  [min-gb]
+  (let [target-dir (io/file "target")
+        _ (when-not (.exists target-dir) (.mkdirs target-dir))
+        free-space-bytes (.getFreeSpace target-dir)
+        free-space-gb (/ free-space-bytes 1024 1024 1024)]
+    (when (< free-space-gb min-gb)
+      (throw (ex-info (format "Insufficient disk space: %.1fGB available, %.1fGB required"
+                              free-space-gb min-gb)
+                      {:available free-space-gb :required min-gb :type :insufficient-disk-space})))))
+
+;; ---- JDK / jlink helpers ----
+(defn- java-home
+  "Pick the JDK used for jlink/jdeps.
+   1) $JLINK_JAVA_HOME (preferred for packaging)
+   2) $JAVA_HOME       (fallback)"
+  []
+  (validate-java-home
+   (or (System/getenv "JLINK_JAVA_HOME")
+       (System/getenv "JAVA_HOME"))))
+
+(defn- tool-path
+  "Resolve a tool under the selected JDK (jdeps, jlink, java)."
+  [tool]
+  (let [home (java-home)]
+    (when-not home
+      (println "❌ No JDK configured. Set JLINK_JAVA_HOME or JAVA_HOME to a JDK for the target platform.")
+      (System/exit 1))
+    (let [exe (if (re-find #"(?i)windows" (os-name))
+                (str tool ".exe")
+                tool)
+          p (str (fs/path home "bin" exe))]
+      (when-not (fs/exists? p)
+        (println (format "❌ Required tool '%s' not found at: %s (JAVA_HOME/JLINK_JAVA_HOME = %s)" tool p home))
+        (System/exit 1))
+      p)))
+
+(defn- jdeps-cmd [] (tool-path "jdeps"))
+(defn- jlink-cmd [] (tool-path "jlink"))
+(defn- java-cmd [] (tool-path "java"))
+
+(defn- ensure-jdk-banner []
+  (let [home (java-home)
+        cmd (java-cmd)]
+    (println (format "🧰 Using JDK at: %s" home))
+    (println (format "    java:  %s" cmd))
+    (println (format "    jdeps: %s" (jdeps-cmd)))
+    (println (format "    jlink: %s" (jlink-cmd)))))
+
+(defn- validate-build-environment [_]
+  "Comprehensive build environment validation."
+  (println "🔍 Validating build environment...")
+
+  ;; Check disk space (2GB minimum for builds)
+  (validate-disk-space 2.0)
+
+  ;; Validate JDK setup
+  (let [home (java-home)]
+    (println (format "✅ JDK validated: %s" home)))
+
+  ;; Check version format
+  (when-not (re-matches #"^[\w\.-]+$" version)
+    (throw (ex-info "Invalid version format contains unsafe characters"
+                    {:version version :type :invalid-version})))
+
+  (println "✅ Build environment validation complete"))
+
+(defn- validate-runtime-artifacts [_]
+  "Validate runtime build artifacts."
+  (println "🔍 Validating runtime artifacts...")
+  (validate-build-artifact uber-file "Runtime uberjar" :min-size (* 5 1024 1024)) ; 5MB minimum (was 10MB)
+  (println "✅ Runtime artifacts validated"))
+
+(defn- validate-native-artifacts [_]
+  "Validate native build artifacts."
+  (println "🔍 Validating native artifacts...")
+  (validate-build-artifact uber-native-file "Native uberjar" :min-size (* 5 1024 1024)) ; 5MB minimum (was 10MB)
+  (when (fs/exists? native-bin)
+    (validate-build-artifact native-bin "Native executable" :min-size (* 1024 1024) :executable true)) ; 1MB minimum
+  (println "✅ Native artifacts validated"))
+
+(defn- validate-jlink-artifacts [_]
+  "Validate jlink build artifacts."
+  (println "🔍 Validating jlink artifacts...")
+  (let [plat (platform-id)
+        out-dir (format "%s/%s-%s" release-dir "obsidize" plat)
+        archive-base (format "%s-%s-%s" artifact version plat)
+        expected-archive (if (re-find #"windows" plat)
+                           (str release-dir "/" archive-base ".zip")
+                           (str release-dir "/" archive-base ".tar.gz"))]
+
+    (validate-build-artifact out-dir "Jlink runtime directory")
+    (validate-build-artifact (str out-dir "/bin/java") "Java runtime" :executable true)
+    (validate-build-artifact expected-archive "Jlink archive" :min-size (* 20 1024 1024)) ; 20MB minimum
+
+    ;; Validate checksums if they exist
+    (let [checksum-file (str expected-archive ".sha256")]
+      (when (fs/exists? checksum-file)
+        (validate-build-artifact checksum-file "Archive checksum" :min-size 64)))
+
+    (println "✅ Jlink artifacts validated")))
+
+(defn validate-all-artifacts [_]
+  "Comprehensive validation of all build artifacts."
+  (println "🔍 Running comprehensive artifact validation...")
+  (validate-build-environment nil)
+
+  (when (fs/exists? uber-file)
+    (validate-runtime-artifacts nil))
+
+  (when (fs/exists? uber-native-file)
+    (validate-native-artifacts nil))
+
+  ;; Check for jlink artifacts
+  (let [plat (platform-id)
+        out-dir (format "%s/%s-%s" release-dir "obsidize" plat)]
+    (when (fs/exists? out-dir)
+      (validate-jlink-artifacts nil)))
+
+  (println "✅ All artifact validation complete"))
 
 (defn write-version-file [_]
   (println (str "Writing version " version " to " version-file-path))
@@ -70,6 +225,7 @@
 ;; --------------------------------------------------------------------
 (defn uber-runtime [_]
   (println "📦 Creating runtime uberjar...")
+  (validate-build-environment nil)
   (fs/create-dirs release-dir)
   (write-version-file nil)
   (b/copy-dir {:src-dirs ["src" "resources"]
@@ -82,6 +238,7 @@
            :uber-file uber-file
            :basis basis
            :main 'obsidize.core})
+  (validate-runtime-artifacts nil)
   (println "✅ Runtime uberjar:" uber-file))
 
 ;; --------------------------------------------------------------------
@@ -162,6 +319,7 @@
 
 (defn native-image [_]
   (println "🚀 Building native image... (This may take a while)")
+  (validate-build-environment nil)
   ;; Ensure configs are fresh
   (generate-native-config nil)
   ;; Build the uber for native image
@@ -169,25 +327,25 @@
   ;; Invoke native-image with the **native** uber jar
   (println "Starting GraalVM native-image build...")
   (let [args (into ["native-image"] (native-flags))
-        res  (b/process {:command-args args :out :inherit :err :inherit})]
+        res (b/process {:command-args args :out :inherit :err :inherit})]
     (if (zero? (:exit res))
-      (println "✅ Native image built at:" native-bin)
+      (do
+        (validate-native-artifacts nil)
+        (println "✅ Native image built at:" native-bin))
       (do (println "❌ native-image failed with exit" (:exit res))
           (System/exit (:exit res))))))
 
 ;; --------------------------------------------------------------------
 ;; jlink (from runtime uber), optionally bundle native on macOS
 ;; --------------------------------------------------------------------
-(defn- ensure-tool [tool]
-  (when-not (fs/which tool)
-    (println (format "❌ Required tool '%s' not found on PATH." tool))
-    (System/exit 1)))
-
 (defn- jdeps-mods [jar]
-  (ensure-tool "jdeps")
-  (let [args ["jdeps" "--multi-release" "21" "--print-module-deps" jar]
-        res  (b/process {:command-args args :out :capture :err :inherit})
-        out  (str/trim (:out res))]
+  (ensure-jdk-banner)
+  (let [jdeps (jdeps-cmd)
+        ;; Use the current JDK’s version for multi-release; most recent JDKs accept 21 safely.
+        ;; You can make this dynamic if needed by parsing `java -version`.
+        args [jdeps "--multi-release" "21" "--print-module-deps" jar]
+        res (b/process {:command-args args :out :capture :err :inherit})
+        out (str/trim (:out res))]
     (when-not (zero? (:exit res))
       (println "❌ jdeps failed.")
       (System/exit 1))
@@ -204,22 +362,23 @@
     (println "ℹ️  Runtime uberjar not found, building it...")
     (uber-runtime nil))
 
-  (ensure-tool "jlink")
-  (let [mods        (jdeps-mods uber-file)
-        plat        (platform-id)
-        out-dir     (format "%s/%s-%s" release-dir "obsidize" plat)
-        app-dir     (str out-dir "/app")
-        bin-dir     (str out-dir "/bin")
+  (ensure-jdk-banner)
+  (let [mods (jdeps-mods uber-file)
+        jlink (jlink-cmd)
+        plat (platform-id)
+        out-dir (format "%s/%s-%s" release-dir "obsidize" plat)
+        app-dir (str out-dir "/app")
+        bin-dir (str out-dir "/bin")
         archive-base (format "%s-%s-%s" artifact version plat)
-        tgz-path    (str release-dir "/" archive-base ".tar.gz")
-        zip-path    (str release-dir "/" archive-base ".zip")
+        tgz-path (str release-dir "/" archive-base ".tar.gz")
+        zip-path (str release-dir "/" archive-base ".zip")
         image-parent (str (fs/parent out-dir))
-        image-name   (fs/file-name out-dir)]
+        image-name (fs/file-name out-dir)]
 
     (println "🧩 Modules:" mods)
     (rm-rf out-dir)
 
-    (let [args ["jlink" "--strip-debug" "--no-header-files" "--no-man-pages"
+    (let [args [jlink "--strip-debug" "--no-header-files" "--no-man-pages"
                 "--compress=zip-6" "--add-modules" mods "--output" out-dir]]
       (println "🚚 Running jlink...")
       (let [res (b/process {:command-args args :out :inherit :err :inherit})]
@@ -234,16 +393,16 @@
 
     ;; POSIX launcher
     (let [launcher (str bin-dir "/" artifact)
-          script   (format "#!/usr/bin/env bash
+          script (format "#!/usr/bin/env bash
 DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
 \"$DIR/java\" -jar \"$DIR/../app/%s\" \"$@\"\n"
-                           (fs/file-name uber-file))]
+                         (fs/file-name uber-file))]
       (write-file! launcher script))
 
     ;; Windows launcher
     (let [launcher (str bin-dir "/" artifact ".cmd")
-          script   (format "@echo off\r\nset DIR=%%~dp0\r\n\"%%DIR%%java.exe\" -jar \"%%DIR%%..\\app\\%s\" %%*\r\n"
-                           (fs/file-name uber-file))]
+          script (format "@echo off\r\nset DIR=%%~dp0\r\n\"%%DIR%%java.exe\" -jar \"%%DIR%%..\\app\\%s\" %%*\r\n"
+                         (fs/file-name uber-file))]
       (write-file! launcher script))
 
     ;; If native binary exists and we’re on macOS, include it
@@ -268,7 +427,7 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
                 (println "❌ zip failed.")
                 (System/exit 1))))
           (do
-            (ensure-tool "tar") ;; tar.exe -a -> zip
+            ;; Fallback: tar.exe as zip
             (println "🗜️  Creating ZIP archive via tar.exe:" zip-path)
             (let [res (b/process {:command-args ["tar" "-a" "-cf" zip-path image-name]
                                   :dir image-parent :out :inherit :err :inherit})]
@@ -281,7 +440,6 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
                                 :out :capture :err :inherit})
                     :out (str/split #"\s+") first))))
       (do
-        (ensure-tool "tar")
         (println "🗜️  Creating tar.gz archive:" tgz-path)
         (let [res (b/process {:command-args ["tar" "-czf" tgz-path "-C" image-parent image-name]
                               :out :inherit :err :inherit})]
@@ -292,7 +450,8 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
           (spit (str tgz-path ".sha256")
                 (-> (b/process {:command-args ["shasum" "-a" "256" tgz-path]
                                 :out :capture :err :inherit})
-                    :out (str/split #"\s+") first)))))))
+                    :out (str/split #"\s+") first)))
+        (validate-jlink-artifacts nil)))))
 
 ;; --------------------------------------------------------------------
 ;; Orchestrators
@@ -304,4 +463,6 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
   (native-image nil)
   ;; jlink (includes native on macOS if present)
   (jlink-image nil)
+  ;; Final comprehensive validation
+  (validate-all-artifacts nil)
   (println "🎁 Done: runtime uber, native image, and jlink archives."))

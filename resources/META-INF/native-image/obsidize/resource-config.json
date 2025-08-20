@@ -1,0 +1,15 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "obsidize/version.edn"
+      },
+      {
+        "pattern": ".*\\.edn$"
+      },
+      {
+        "pattern": ".*\\.json$"
+      }
+    ]
+  }
+}

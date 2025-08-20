@@ -45,7 +45,7 @@
         (is (string? (:title res)))
         (is (string? (:filename res)))
         (is (string? (:content res)))
-        (is (str/includes? (:content res) "obsidized_at: 2025-01-01"))
+        (is (str/includes? (:content res) "obsidized_at: 2023-01-01T10:00:00Z"))
         (is (str/includes? (:content res) "obsidize_version: 1.0.0"))
         (is (str/includes? (:content res) "tags:"))
         (is (str/includes? (:content res) "[[L]]")))))

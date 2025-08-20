@@ -1,0 +1,47 @@
+class Obsidize < Formula
+  desc "Claude to Obsidian converter"
+  homepage "https://github.com/{{REPO}}"
+  license "AGPL-3.0"
+  version "{{VERSION}}"
+
+  on_macos do
+    on_arm do
+      url "{{ARM64_URL}}"
+      sha256 "{{ARM64_SHA}}"
+    end
+    on_intel do
+      url "{{AMD64_URL}}"
+      sha256 "{{AMD64_SHA}}"
+    end
+  end
+
+  {{#LINUX_ENABLED}}
+  on_linux do
+    on_intel do
+      url "{{LINUX_URL}}"
+      sha256 "{{LINUX_SHA}}"
+    end
+  end
+  {{/LINUX_ENABLED}}
+
+  def install
+    # The archive contains a single top-level dir: obsidize-<platform-id>/
+    top = Dir["obsidize-*"].find { |p| File.directory?(p) }
+    odie "Unexpected jlink layout" if top.nil?
+
+    libexec.install Dir["#{top}/*"]
+
+    # Symlink launchers from top/bin into Homebrew bin
+    if (libexec/"bin/obsidize").exist?
+      bin.install_symlink libexec/"bin/obsidize"
+    end
+    # Optional native (macOS archives include it)
+    if (libexec/"bin/obsidize-native").exist?
+      bin.install_symlink libexec/"bin/obsidize-native"
+    end
+  end
+
+  test do
+    assert_match "obsidize", shell_output("#{bin}/obsidize --help")
+  end
+end

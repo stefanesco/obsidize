@@ -1,4 +1,8 @@
 #kaocha/v1
-{:tests [{:id :unit
-          :test-paths ["test"]}]
- :reporter [kaocha.report/documentation]}
+ {:tests [{:id :unit
+           :test-paths ["test/obsidize"]
+           :kaocha/source-paths ["src"]}
+          {:id :e2e
+           :test-paths ["test/e2e"]
+           :kaocha/source-paths ["src"]}]
+  :reporter [kaocha.report/documentation]}

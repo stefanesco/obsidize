@@ -5,7 +5,8 @@
             [clojure.set :as set]
             [clojure.data.json :as json]
             [obsidize.data-validation :as validation]
-            [obsidize.logging :as log])
+            [obsidize.logging :as log]
+            [obsidize.error :as error])
   (:import [java.util.zip ZipFile ZipEntry]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -58,11 +59,11 @@
         target-file (io/file target-dir entry-path)
         target-dir-canonical (.getCanonicalPath (io/file target-dir))
         target-file-canonical (.getCanonicalPath target-file)]
-    
+
     ;; Security check: Prevent path traversal attacks
     (when-not (.startsWith target-file-canonical target-dir-canonical)
       (throw (SecurityException. (str "Path traversal detected in ZIP entry: " entry-path))))
-    
+
     (when-not (.isDirectory entry)
       (io/make-parents target-file)
       (with-open [input (.getInputStream zip-file entry)
@@ -138,71 +139,102 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- safe-parse-json
-  "Parse JSON with error handling, returns {:success? bool, :data [], :error str}"
+  "Parse JSON with error handling using pure error results"
   [file-path]
   (try
     (let [content (slurp file-path)
-          data (json/read-str content :key-fn keyword)]
-      {:success? true
-       :data (cond
-               (vector? data) (vec data) ; Ensure vector, not lazy seq
-               (seq? data) (vec data) ; Convert lazy seq to vector
-               :else [data]) ; Wrap single item in vector
-       :error nil})
+          data (json/read-str content :key-fn keyword)
+          normalized-data (cond
+                            (vector? data) (vec data) ; Ensure vector, not lazy seq
+                            (seq? data) (vec data) ; Convert lazy seq to vector
+                            :else [data])] ; Wrap single item in vector
+      (error/success normalized-data))
     (catch Exception e
-      {:success? false
-       :data []
-       :error (str "Failed to parse " file-path ": " (.getMessage e))})))
+      (error/failure (str "Failed to parse " file-path ": " (.getMessage e))))))
 
 (defn load-conversations
-  "Load conversations.json with error handling and validation"
+  "Load conversations.json with error handling and validation using pure error results"
   [directory]
   (let [conversations-path (str directory "/conversations.json")]
     (if (file-exists? conversations-path)
-      (let [parse-result (safe-parse-json conversations-path)]
-        (if (:success? parse-result)
-          (let [validation-result (validation/validate-conversations (:data parse-result))]
-            {:success? true
-             :data (:valid-conversations validation-result)
-             :error nil
-             :validation-summary {:total (:total-count validation-result)
-                                  :valid (:valid-count validation-result)
-                                  :invalid (:invalid-count validation-result)}})
-          parse-result))
-      {:success? false
-       :data []
-       :error "conversations.json not found"})))
+      (let [result (error/bind
+                    (safe-parse-json conversations-path)
+                    (fn [data]
+                      (let [validation-result (validation/validate-conversations data)]
+                        (error/success
+                         {:data (:valid-conversations validation-result)
+                          :validation-summary {:total (:total-count validation-result)
+                                               :valid (:valid-count validation-result)
+                                               :invalid (:invalid-count validation-result)}}))))]
+        ;; Convert to legacy format for compatibility
+        (if (:success? result)
+          (merge {:success? true :error nil} (:data result))
+          {:success? false :data [] :error (first (:errors result))}))
+      {:success? false :data [] :error "conversations.json not found"})))
 
 (defn load-projects
-  "Load projects.json with error handling and validation"
+  "Load projects.json with error handling and validation using pure error results"
   [directory]
   (let [projects-path (str directory "/projects.json")]
     (if (file-exists? projects-path)
-      (let [parse-result (safe-parse-json projects-path)]
-        (if (:success? parse-result)
-          (let [validation-result (validation/validate-projects (:data parse-result))]
-            {:success? true
-             :data (:valid-projects validation-result)
-             :error nil
-             :validation-summary {:total (:total-count validation-result)
-                                  :valid (:valid-count validation-result)
-                                  :invalid (:invalid-count validation-result)}})
-          parse-result))
-      {:success? false
-       :data []
-       :error "projects.json not found"})))
+      (let [result (error/bind
+                    (safe-parse-json projects-path)
+                    (fn [data]
+                      (let [validation-result (validation/validate-projects data)]
+                        (error/success
+                         {:data (:valid-projects validation-result)
+                          :validation-summary {:total (:total-count validation-result)
+                                               :valid (:valid-count validation-result)
+                                               :invalid (:invalid-count validation-result)}}))))]
+        ;; Convert to legacy format for compatibility
+        (if (:success? result)
+          (merge {:success? true :error nil} (:data result))
+          {:success? false :data [] :error (first (:errors result))}))
+      {:success? false :data [] :error "projects.json not found"})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Main Data Pack Processing Function
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn- process-folder
+  "Process a folder data pack using pure functions"
+  [input-path]
+  (let [validation (validate-data-pack input-path)]
+    (if (:valid? validation)
+      (let [conversations-result (load-conversations input-path)
+            projects-result (load-projects input-path)
+            errors (cond-> []
+                     (not (:success? conversations-result)) (conj (:error conversations-result))
+                     (not (:success? projects-result)) (conj (:error projects-result)))
+            success? (and (:success? conversations-result) (:success? projects-result))]
+        {:success? success?
+         :data-dir input-path
+         :conversations (:data conversations-result)
+         :projects (:data projects-result)
+         :errors errors})
+      {:success? false
+       :data-dir input-path
+       :conversations []
+       :projects []
+       :errors [(str "Missing required files: " (str/join ", " (:missing validation)))]})))
+
+(defn- process-archive
+  "Process an archive data pack by extraction then folder processing"
+  [input-path]
+  (if-let [extracted-dir (extract-archive input-path)]
+    (let [result (process-folder extracted-dir)]
+      (assoc result :data-dir extracted-dir)) ; Keep track of temp directory
+    {:success? false
+     :data-dir nil
+     :conversations []
+     :projects []
+     :errors [(str "Failed to extract archive: " input-path)]}))
+
 (defn process-data-pack
   "Main function to process a Claude data pack from any input format.
    Returns: {:success? bool, :data-dir str, :conversations [], :projects [], :errors []}"
   [input-path]
-  (let [input-type (detect-input-type input-path)
-        errors (atom [])]
-
+  (let [input-type (detect-input-type input-path)]
     (case input-type
       :unknown
       {:success? false
@@ -212,34 +244,10 @@
        :errors [(str "Unknown input type: " input-path)]}
 
       :folder
-      (let [validation (validate-data-pack input-path)]
-        (if (:valid? validation)
-          (let [conversations-result (load-conversations input-path)
-                projects-result (load-projects input-path)]
-            (when-not (:success? conversations-result)
-              (swap! errors conj (:error conversations-result)))
-            (when-not (:success? projects-result)
-              (swap! errors conj (:error projects-result)))
-            {:success? (and (:success? conversations-result) (:success? projects-result))
-             :data-dir input-path
-             :conversations (:data conversations-result)
-             :projects (:data projects-result)
-             :errors @errors})
-          {:success? false
-           :data-dir input-path
-           :conversations []
-           :projects []
-           :errors [(str "Missing required files: " (str/join ", " (:missing validation)))]}))
+      (process-folder input-path)
 
       :archive
-      (if-let [extracted-dir (extract-archive input-path)]
-        (let [result (process-data-pack extracted-dir)]
-          (assoc result :data-dir extracted-dir)) ; Keep track of temp directory
-        {:success? false
-         :data-dir nil
-         :conversations []
-         :projects []
-         :errors [(str "Failed to extract archive: " input-path)]}))))
+      (process-archive input-path))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Cleanup Functions

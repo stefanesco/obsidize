@@ -409,32 +409,52 @@ All names are sanitized for cross-platform compatibility while preserving readab
 
 ### Test Coverage
 
-The project includes **comprehensive test coverage** with 65+ test assertions:
+The project includes **comprehensive test coverage** with 520+ test assertions across multiple test categories:
 
-- **Unit Tests**: Data validation, frontmatter parsing, timestamp logic, filename sanitization
+- **Unit Tests** (96 test suites, 480+ assertions): Data validation, frontmatter parsing, timestamp logic, filename sanitization
 - **Integration Tests**: Full vault scanning, update planning, message appending
-- **End-to-End Tests**: Complete incremental workflow scenarios
+- **End-to-End Tests** (5 test suites, 36 assertions): Package validation with real CLI execution
 - **Edge Case Tests**: Empty vaults, malformed data, permission issues, large datasets
 
 ```bash
-# Run all tests
-bb test:clj                                           # Should show 65+ assertions passing
+# Run unit tests (fast - used in development)
+bb test                   # Run all unit tests (96 test suites, 480+ assertions)
+
+# Run end-to-end package validation (slower - validates compiled artifacts)
+bb test-e2e              # Test JAR, native image, and CLI functionality (5 tests, 36 assertions)
+
+# Run comprehensive validation (build + test packages)
+bb validate-release       # Build all packages and run e2e validation
 
 # Run specific test suites
-clojure -M:test --focus obsidize.vault-scanner-test          # Vault scanning logic
-clojure -M:test --focus obsidize.conversation-appending-test # Message appending
-clojure -M:test --focus obsidize.data-validation-test       # Data validation
-clojure -M:test --focus obsidize.end-to-end-incremental-test # Full workflows
+clojure -M:test :unit --focus obsidize.vault-scanner-test          # Vault scanning logic
+clojure -M:test :unit --focus obsidize.conversation-appending-test # Message appending
+clojure -M:test :unit --focus obsidize.data-validation-test       # Data validation
+clojure -M:test :unit --focus obsidize.end-to-end-incremental-test # Full workflows
+clojure -M:test :e2e --focus e2e.package-validation-test          # Package validation
 ```
+
+### Test Categories
+
+- **Unit Tests**: Pure function testing with edge cases (fast feedback during development)
+- **Integration Tests**: Component interaction testing
+- **End-to-End Tests**: Real package validation with CLI execution
+- **Package Validation Tests**: Cross-platform compatibility and performance testing
+- **Performance Tests**: Large dataset and memory usage testing
 
 ### Development Commands
 
 ```bash
 # Development workflow
 bb init                    # Install dependencies  
-bb test:clj               # Run all tests (65+ assertions)
-bb lint:clj               # Code quality checks
-bb check                  # Full CI pipeline
+bb test                   # Run unit tests (96 test suites, 480+ assertions)
+bb lint                   # Code quality checks
+bb check                  # Full CI pipeline (unit tests + security + audit)
+
+# Package building and validation
+bb package                # Build all packages (JAR, native-image, jlink)
+bb validate-release       # Build packages + run e2e validation
+bb test-e2e              # Run e2e tests on existing packages
 
 # Manual testing with REPL
 clojure -M:nrepl          # Start REPL on port 7888
@@ -457,6 +477,245 @@ time clojure -M -m obsidize.core \
   --output-dir existing-large-vault \
   --dry-run
 ```
+
+## 🔨 Build Options & Approaches
+
+### Overview
+
+Obsidize supports multiple build approaches optimized for different use cases: local development, CI/CD pipelines, and production releases. Each approach has specific requirements and configurations.
+
+### Build Approaches
+
+#### 1. **Local Development Build**
+
+**Purpose**: Fast iteration during development and testing  
+**Output**: Standalone JAR file for immediate testing
+
+```bash
+# Prerequisites
+- Java 21+ (any distribution)
+- Clojure CLI 
+- Babashka (for task automation)
+
+# Quick setup
+bb init                 # Install dependencies
+bb test                 # Verify everything works
+
+# Build standalone JAR
+bb uber-runtime         # Creates target/obsidize-standalone.jar
+
+# Test the JAR
+java -jar target/obsidize-standalone.jar --help
+```
+
+**Configuration**: Uses default settings with minimal external dependencies.
+
+#### 2. **CI Pipeline Build**
+
+**Purpose**: Automated quality assurance, testing, and artifact validation  
+**Triggers**: Push to `main`, Pull Requests  
+**Platforms**: Linux (ubuntu-latest), macOS (macos-latest), Windows (windows-latest)
+
+```bash
+# Full CI pipeline (Linux only - includes security scanning)
+bb ci                   # Equivalent to: init + lint + test + audit + trivy-scan
+
+# Platform-specific builds (macOS/Windows)
+bb lint                 # Code quality checks
+bb test                 # Test suite execution
+```
+
+**Key Features**:
+- **Multi-platform testing** across Linux, macOS, Windows
+- **Security scanning** with Trivy (Linux only)
+- **Dependency auditing** with antq (Linux only) 
+- **Configurable tool versions** via GitHub repository variables
+- **Artifact caching** for faster builds
+
+**Required Configurations**:
+```yaml
+# GitHub repository secrets (optional - uses secure defaults)
+vars:
+  JAVA_VERSION: "21"                    # Override Java version
+  CLOJURE_CLI_VERSION: "1.12.1.1550"   # Pin Clojure CLI version
+  TRIVY_GPG_KEY_ID: "B5690EEEBB952194" # Override security keys
+```
+
+#### 3. **Release Build**
+
+**Purpose**: Production-ready artifacts with comprehensive e2e validation across all platforms  
+**Triggers**: Git tags (`v*.*.*`), Manual workflow dispatch  
+**Platforms**: Linux (amd64), macOS (amd64/arm64), Windows (amd64)
+
+```bash
+# Complete release pipeline with validation
+bb validate-release     # Equivalent to: package + test-e2e (build + comprehensive validation)
+
+# Alternative: Step-by-step release building
+bb package              # Build all packages (JAR, native-image, jlink)
+bb test-e2e             # Run package validation tests
+
+# Individual release components
+bb native-image         # GraalVM native executable (macOS only by default)
+bb jlink-image          # JVM runtime bundle (all platforms)
+bb dist                 # List built artifacts
+```
+
+**Artifact Types**:
+1. **Native Executables**: 
+   - `obsidize-native-{version}-{platform}.tar.gz`
+   - Standalone binaries (currently macOS only)
+   - Fastest startup, no JVM required
+
+2. **JLink Runtime Bundles**:
+   - `obsidize-{version}-{platform}.tar.gz` / `.zip`  
+   - Bundled JVM runtime + application
+   - Cross-platform, predictable performance
+
+3. **Uber JAR**:
+   - `obsidize-standalone.jar`
+   - Universal compatibility, requires Java 21+
+
+**Required Configurations**:
+```yaml
+# GitHub repository secrets (required for release)
+secrets:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          # Auto-provided
+  HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }} # For Homebrew publishing
+
+# GitHub repository variables (required for Homebrew)
+vars:
+  HOMEBREW_TAP_REPO: "username/homebrew-tap"         # Target tap repository
+```
+
+### Build Configuration Matrix
+
+| Build Type | Java | Native Image | Security Scan | Platforms | Artifacts |
+|------------|------|--------------|---------------|-----------|-----------|
+| **Local** | Any 21+ | Optional | No | Current OS | JAR |
+| **CI** | Temurin 21 | No | Yes (Linux) | Linux, macOS, Windows | None |
+| **Release** | GraalVM 21 | Yes (macOS) | Yes (Linux) | Linux, macOS (x64/arm64), Windows | JAR, Native, JLink |
+
+### Native Image Compilation
+
+**Requirements**:
+```bash
+# GraalVM with native-image tool
+bb native-prereqs      # Check prerequisites
+
+# Platform support
+- macOS: ✅ Full support (Intel/Apple Silicon)
+- Linux: 🔄 Work in progress  
+- Windows: ❌ Not currently supported
+```
+
+**Native Image Features**:
+- **ZIP file handling**: Complete java.util.zip support
+- **Reflection configuration**: Pre-configured for Clojure runtime
+- **System integration**: File I/O, environment variables, process execution
+- **Diagnostics**: Built-in troubleshooting with `--diagnostics` flag
+
+**Configuration Files**:
+```
+resources/META-INF/native-image/obsidize/
+├── reflect-config.json       # Reflection metadata
+├── resource-config.json      # Bundled resources  
+├── jni-config.json          # JNI configuration
+├── proxy-config.json        # Dynamic proxy support
+└── serialization-config.json # Serialization support
+```
+
+### Environment Customization
+
+All builds support extensive customization through GitHub repository/organization variables:
+
+**Common Overrides**:
+```yaml
+# Tool versions
+JAVA_VERSION: "17"                    # Use Java 17 instead of 21
+BABASHKA_VERSION: "1.3.190"          # Pin specific Babashka version
+CLOJURE_CLI_VERSION: "1.11.4.1474"  # Use older Clojure CLI
+
+# Security settings  
+CLOJURE_INSTALL_SHA256: "custom-hash" # Custom installer validation
+TRIVY_GPG_KEY_ID: "custom-key-id"     # Override security keys
+
+# GitHub Actions versions
+CHECKOUT_ACTION_VERSION: "v4"         # Pin for security compliance
+CACHE_ACTION_VERSION: "v3"           # Use older cache action
+```
+
+See [Configurable Build Environment](#️-configurable-build-environment) for complete variable reference.
+
+### Build Troubleshooting
+
+#### Common Issues
+
+**Native Image Build Failures**:
+```bash
+# Check prerequisites
+bb native-prereqs
+
+# Enable verbose logging
+bb native-image --verbose
+
+# Run diagnostics on built executable
+./target/release/*/obsidize-native --diagnostics
+```
+
+**CI/CD Pipeline Issues**:
+```bash
+# Test CI locally with act (GitHub Actions runner)
+act push
+
+# Verify Trivy installation
+trivy version
+
+# Check clj-kondo configuration
+clj-kondo --version
+```
+
+**Dependency Issues**:
+```bash
+# Clean and rebuild
+bb clean && bb init
+
+# Check for outdated dependencies  
+bb audit
+
+# Verify dependency resolution
+clojure -Stree
+```
+
+#### Performance Optimization
+
+**Faster Local Builds**:
+```bash
+# Skip tests during development
+clojure -T:build uber-runtime
+
+# Use incremental compilation
+export CLJ_CONFIG='{:mvn/local-repo ".m2"}'
+```
+
+**CI Pipeline Optimization**:
+- **Caching**: Clojure dependencies, Trivy database cached automatically
+- **Parallel execution**: Matrix builds run concurrently  
+- **Early termination**: `fail-fast: false` allows all platforms to complete
+
+### Build Output Structure
+
+```
+target/release/{version}/
+├── obsidize-standalone.jar                    # Universal JAR
+├── obsidize-native                            # Native executable (macOS)
+├── obsidize-{version}-macos-aarch64.tar.gz   # JLink bundle (Apple Silicon)  
+├── obsidize-{version}-macos-x64.tar.gz       # JLink bundle (Intel Mac)
+├── obsidize-{version}-linux-amd64.tar.gz     # JLink bundle (Linux)
+└── obsidize-{version}-windows-x64.zip        # JLink bundle (Windows)
+```
+
+Use `bb dist` to list all available artifacts after a build.
 
 ## 🏗️ Architecture
 
@@ -600,18 +859,24 @@ clojure -M -m obsidize.core \
 ### Development Workflow
 
 ```bash
-bb init          # Setup dependencies
-bb test:clj      # Run tests (should show 65+ assertions)
-bb lint:clj      # Code quality checks  
-bb check         # Full CI pipeline
+bb init                 # Setup dependencies
+bb test                # Run unit tests (96 test suites, 480+ assertions)
+bb lint                # Code quality checks  
+bb check               # Full CI pipeline (unit tests + security + audit)
+
+# Package validation workflow
+bb package             # Build all packages (JAR, native-image, jlink)
+bb test-e2e           # Run e2e package validation tests
+bb validate-release    # Complete validation: build + test packages
 ```
 
 ### Test Categories
 
-- **Unit tests**: Pure function testing with edge cases
+- **Unit tests**: Pure function testing with edge cases (fast feedback during development)
 - **Integration tests**: Component interaction testing
-- **End-to-end tests**: Full workflow scenario testing
+- **End-to-end tests**: Package validation with real CLI execution (slower, comprehensive)
 - **Performance tests**: Large dataset and memory usage testing
+- **Cross-platform tests**: Compatibility validation across all supported platforms
 
 ## Build and Release
 
@@ -619,38 +884,54 @@ This project uses GitHub Actions for CI/CD. There are two main pipelines: the CI
 
 ### CI Pipeline
 
-The CI pipeline runs on every push to the `main` branch and on every pull request. It ensures that the code is always in a good state.
+The CI pipeline runs on every push to the `main` branch and on every pull request. It focuses on fast feedback with unit tests and security validation across multiple platforms.
 
 ```mermaid
 graph TD
     A[Push to main] --> B{CI Pipeline}
     C[Pull Request] --> B
-    B --> D[Build Job on ubuntu-latest]
-    D --> E[Setup Environment]
-    E --> F[Run 'bb ci']
-    F --> G{Run all checks}
-    G --> H[Lint]
-G --> I[Test]
-    G --> J[Verify]
-    J --> K[Audit Dependencies using antq - on Linux only]
-    J --> L[Scan for Vulnerabilities using trivy - on Linux only]
+    B --> D[Matrix Build Jobs]
+    D --> E[Linux ubuntu-latest]
+    D --> F[macOS macos-latest]
+    D --> G[Windows windows-latest]
+    E --> H[Setup Environment]
+    F --> H
+    G --> H
+    H --> I{Per Platform}
+    I --> J[Linux: bb ci]
+    I --> K[macOS: bb lint + bb test]
+    I --> L[Windows: bb lint + bb test]
+    J --> M[Comprehensive Checks]
+    K --> N[Fast Checks]
+    L --> N
+    M --> O[Lint + Unit Tests + Security Scan + Dependency Audit]
+    N --> P[Lint + Unit Tests Only]
 ```
 
 **Stages:**
 
 1. **Trigger:** The pipeline is triggered by a push to `main` or a pull request.
-2. **Build Job:** A single job runs on an `ubuntu-latest` runner.
-3. **Setup Environment:** The job checks out the code, sets up caches, Java, Clojure, and other dependencies.
-4. **Run Checks:** The job executes the `bb ci` command, which runs all the necessary checks:
-  a. **Lint:** Lints the Clojure code using `clj-kondo`.
-  b. **Test:** Runs the test suite using `kaocha`.
-  c. **Verify:** Performs security-related checks:
-     i. **Audit Dependencies:** Checks for outdated dependencies using `antq`. This step only runs on Linux.
-     ii. **Scan for Vulnerabilities:** Scans for vulnerabilities in the dependencies using `trivy`. This step also only runs on Linux.
+2. **Multi-Platform Matrix:** Jobs run in parallel on Linux, macOS, and Windows for comprehensive cross-platform validation.
+3. **Setup Environment:** Each job checks out code, sets up caches, Java, Clojure CLI, and build tools.
+4. **Platform-Specific Execution:**
+   - **Linux (ubuntu-latest):** Runs `bb ci` which includes comprehensive checks:
+     - **Lint:** Lints Clojure code using `clj-kondo`
+     - **Unit Tests:** Runs full test suite (96 test suites, 480+ assertions)
+     - **Security Scan:** Vulnerability scanning with Trivy
+     - **Dependency Audit:** Outdated dependency checks with antq
+   - **macOS/Windows:** Runs focused checks for faster feedback:
+     - **Lint:** Code quality validation
+     - **Unit Tests:** Cross-platform compatibility testing
+
+**Key Features:**
+- **Fast Feedback:** Unit tests complete quickly (typically < 2 minutes)
+- **Cross-Platform Validation:** Ensures code works on all supported platforms
+- **Security-First:** Comprehensive security scanning on Linux
+- **Parallel Execution:** All platforms test simultaneously
 
 ### Release Pipeline
 
-The Release pipeline runs when a new tag is pushed to the repository (e.g., `v0.1.0`). It builds the native executables for Linux and macOS, creates a GitHub Release, and publishes the new version to a Homebrew tap.
+The Release pipeline runs when a new tag is pushed to the repository (e.g., `v0.1.0`). It builds packages across all platforms, validates them with comprehensive e2e testing, then creates GitHub releases and updates Homebrew.
 
 This pipeline can also be triggered manually from the GitHub Actions UI for testing purposes (in "dry-run" mode).
 
@@ -658,48 +939,70 @@ This pipeline can also be triggered manually from the GitHub Actions UI for test
 graph TD
     A[Push tag v*.*.*] --> B{Release Pipeline};
     B --> C[Build Release Job];
-    C --> D[Matrix: Linux, macOS amd64, macOS arm64];
+    C --> D[Matrix: Linux, macOS amd64, macOS arm64, Windows];
     D --> E{For each OS};
-    E --> F[Setup Environment];
-    F --> G[Run 'bb package'];
-    G --> H[Package Artifacts];
+    E --> F[Setup Environment with GraalVM];
+    F --> G[Run 'bb validate-release'];
+    G --> H[Build + Test Packages];
     H --> I[Upload Artifacts];
-    I --> J[Release Job];
-    J --> K[Download Artifacts];
-    K --> L[Create GitHub Release];
-    L --> M[Update Homebrew Tap Job];
-    M --> N[Download Artifacts];
-    N --> O[Generate Formula];
-    O --> P[Push to Homebrew Tap];
+    I --> J[E2E Validation Job];
+    J --> K[Matrix: All Platforms];
+    K --> L[Download Artifacts];
+    L --> M[Run Package Validation Tests];
+    M --> N[Cross-Platform CLI Testing];
+    N --> O[Release Job];
+    O --> P[Download All Artifacts];
+    P --> Q[Create GitHub Release];
+    Q --> R[Update Homebrew Tap Job];
+    R --> S[Generate Formula];
+    S --> T[Push to Homebrew Tap];
 ```
 
 **Stages:**
 
 1. **Trigger:** The pipeline is triggered by a push of a tag that starts with `v`.
-2. **Build Release Job:** This job runs on a matrix of operating systems (Linux, macOS amd64, macOS arm64). For each OS, it:
-   a. Sets up the environment with GraalVM.
-   b. Runs the `bb package` command, which builds the native executable. This command also runs all the CI checks.
-   c. Packages the executable into a `.tar.gz` archive and calculates its SHA256 hash.
-   d. Uploads the archive and the SHA256 hash as artifacts.
-3. **Release Job:** This job runs after all the build jobs are complete. It:
-    a. Downloads all the release artifacts.
-    b. Creates a new GitHub Release and attaches all the archives to it.
-4. **Update Homebrew Tap Job:** This job runs after the release is created. It:
-    a. Downloads the release artifacts.
-    b. Generates a new Homebrew formula with the updated version and SHA256 hashes.
-    c. Pushes the new formula to the Homebrew tap repository.
+2. **Build Release Job:** Runs on matrix of all platforms (Linux, macOS Intel/ARM, Windows):
+   - Sets up environment with GraalVM for native compilation
+   - Runs `bb validate-release` which includes:
+     - Complete CI validation (lint, unit tests, security scan)
+     - Package building (JAR, native-image, jlink bundles)
+     - End-to-end testing with real CLI execution
+   - Packages artifacts and uploads with SHA256 checksums
+3. **E2E Validation Job:** **NEW** - Comprehensive package validation:
+   - **Matrix Execution:** Runs on all target platforms in parallel
+   - **Artifact Testing:** Downloads and tests actual built packages
+   - **CLI Validation:** Validates real command-line functionality
+   - **Cross-Platform Testing:** Ensures compatibility across all platforms
+   - **Performance Testing:** Compares JAR vs native image performance
+4. **Release Job:** Runs only after successful build AND validation:
+   - Downloads all validated artifacts
+   - Creates GitHub Release with tested packages
+5. **Update Homebrew Tap Job:** Updates package manager:
+   - Generates Homebrew formula with validated SHA256 hashes
+   - Pushes to Homebrew tap repository
 
-**Gates:**
+**Enhanced Quality Gates:**
 
-1. The `release` job will only run if the `build-release` job completes successfully for all operating systems.
-2. The `update-homebrew` job will only run if the `release` job completes successfully.
-3. The actual release to GitHub and the push to the Homebrew tap are gated and will not run in "dry-run" mode.
+1. **Build Gate:** All platform builds must complete successfully
+2. **Validation Gate:** **NEW** - All e2e package validation tests must pass
+3. **Release Gate:** Release only created after successful validation
+4. **Homebrew Gate:** Formula only updated after successful GitHub release
+5. **Dry-Run Protection:** Test runs skip actual release/publishing
 
-**Targets:**
+**Key Improvements:**
+- **Comprehensive E2E Testing:** Real package validation before release
+- **Cross-Platform Validation:** Tests on all supported platforms
+- **Quality Assurance:** No releases without passing package validation
+- **Performance Validation:** Ensures both JAR and native packages work correctly
 
-- The final targets of the pipeline are:
-  - A new GitHub Release with the native executables for Linux and macOS.
-  - An updated Homebrew formula for easy installation on macOS.
+**Release Artifacts:**
+
+The pipeline produces multiple validated package types:
+- **GitHub Release:** Comprehensive release with all validated packages
+- **Native Executables:** `obsidize-native-{version}-{platform}.tar.gz` (macOS)
+- **JLink Bundles:** `obsidize-{version}-{platform}.tar.gz/.zip` (all platforms)
+- **Universal JAR:** `obsidize-standalone.jar` (platform-independent)
+- **Updated Homebrew Formula:** Automatic formula updates for easy installation
 
 ### Testing the Release Pipeline
 
@@ -715,6 +1018,191 @@ To test the release pipeline:
     - **Dry-run:** If checked (the default), the workflow will run all the build and packaging steps but will skip the final steps of creating the GitHub Release and pushing to the Homebrew tap.
 
 This is a safe and effective way to test any changes to the release process.
+
+## 🔒 Security Verification
+
+### CI/CD Security Values
+
+The build system uses verified checksums and GPG keys for security validation. These values can be configured using GitHub repository/organization variables (see [Configurable Build Environment](#️-configurable-build-environment)) or will use the secure defaults listed below.
+
+#### Current Security Values (as of 2025-08-20)
+
+| Component | Type | Value | Verification Date |
+|-----------|------|-------|-------------------|
+| **Clojure CLI** | SHA256 | `aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d` | 2025-08-20 |
+| **Trivy** | GPG Key ID | `B5690EEEBB952194` | 2025-08-20 |
+| **Chocolatey Clojure** | Version | `1.12.1.1550` | 2025-08-20 |
+
+#### Verification Process
+
+**For Clojure CLI SHA256:**
+```bash
+# Download the installer script
+curl -fsSL https://download.clojure.org/install/linux-install-1.12.1.1550.sh -o linux-install-1.12.1.1550.sh
+
+# Generate and verify SHA256 checksum
+sha256sum linux-install-1.12.1.1550.sh
+# Should output: aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d
+
+# Clean up
+rm linux-install-1.12.1.1550.sh
+```
+
+**For Trivy GPG Key:**
+```bash
+# Download the public key
+wget -qO trivy.key https://aquasecurity.github.io/trivy-repo/deb/public.key
+
+# Verify it's a valid PGP key
+file trivy.key
+# Should output: trivy.key: PGP public key block Public-Key (old)
+
+# The key ID B5690EEEBB952194 is from official Trivy releases
+# Verify at: https://github.com/aquasecurity/trivy/releases
+
+# Clean up
+rm trivy.key
+```
+
+**For Chocolatey Clojure Version:**
+```bash
+# Verify version exists on Chocolatey
+# Check: https://community.chocolatey.org/packages/clojure
+# Version 1.12.1.1550 is confirmed available and approved
+```
+
+#### Authoritative Sources
+
+- **Clojure CLI**: https://download.clojure.org/install/
+- **Trivy GPG Key**: https://aquasecurity.github.io/trivy-repo/deb/public.key
+- **Trivy Releases**: https://github.com/aquasecurity/trivy/releases
+- **Chocolatey Clojure**: https://community.chocolatey.org/packages/clojure
+
+#### Updating Security Values
+
+When updating tool versions, follow this process:
+
+1. **Update Clojure CLI version:**
+   ```bash
+   # Check for new versions at https://clojure.org/releases/tools
+   # Download new installer and generate SHA256
+   curl -fsSL https://download.clojure.org/install/linux-install-NEW_VERSION.sh -o installer.sh
+   sha256sum installer.sh
+   ```
+
+2. **Update Trivy GPG Key:**
+   ```bash
+   # Check latest releases at https://github.com/aquasecurity/trivy/releases
+   # Look for "GPG key ID" in release notes
+   # Update TRIVY_GPG_KEY_ID in workflow files
+   ```
+
+3. **Update Chocolatey version:**
+   ```bash
+   # Check available versions at https://community.chocolatey.org/packages/clojure
+   # Update CHOCOLATEY_CLOJURE_VERSION in workflow files
+   ```
+
+4. **Update configuration:**
+   - **Recommended**: Set new values using GitHub repository variables (see [Configurable Build Environment](#️-configurable-build-environment))
+   - **Alternative**: Update defaults in workflow files:
+     - `.github/workflows/ci.yml`
+     - `.github/workflows/release.yml`
+   - Update verification comments in this README
+
+#### Security Notes
+
+- **Never use unverified checksums** - always generate them from official sources
+- **Validate GPG keys** - ensure they come from official repositories
+- **Pin specific versions** - avoid "latest" for reproducible builds
+- **Document changes** - update this README when values change
+- **Test thoroughly** - run workflows in dry-run mode after updates
+
+## ⚙️ Configurable Build Environment
+
+### Overview
+
+The GitHub Actions workflows (CI and Release) now support configurable environment variables that can be overridden at the repository level using GitHub's organization/repository variables feature. This provides flexibility for different environments, tool versions, or security requirements without modifying workflow files.
+
+### Configuration Variables
+
+#### Platform and Runtime Configuration
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `JAVA_VERSION` | `21` | Java version for builds |
+| `JAVA_DISTRIBUTION` | `temurin` (CI) / `graalvm` (Release) | Java distribution to use |
+| `BABASHKA_VERSION` | `latest` | Babashka CLI version |
+| `CLJ_KONDO_VERSION` | `latest` | clj-kondo linter version |
+
+#### GitHub Actions Versions
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CHECKOUT_ACTION_VERSION` | `v5` | actions/checkout version |
+| `CACHE_ACTION_VERSION` | `v4` | actions/cache version |
+| `SETUP_JAVA_ACTION_VERSION` | `v4` | actions/setup-java version |
+| `SETUP_CLOJURE_ACTION_VERSION` | `13.4` | DeLaGuardo/setup-clojure version |
+| `SETUP_GRAALVM_ACTION_VERSION` | `v1` | graalvm/setup-graalvm version (Release only) |
+| `UPLOAD_ARTIFACT_ACTION_VERSION` | `v4` | actions/upload-artifact version (Release only) |
+| `DOWNLOAD_ARTIFACT_ACTION_VERSION` | `v4` | actions/download-artifact version (Release only) |
+| `GH_RELEASE_ACTION_VERSION` | `v2` | softprops/action-gh-release version (Release only) |
+
+#### Security and Tool Configuration
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `CLOJURE_CLI_VERSION` | `1.12.1.1550` | Clojure CLI version to install |
+| `CLOJURE_INSTALL_SHA256` | `aea202cd...` | SHA256 checksum for Linux installer validation |
+| `CLOJURE_DOWNLOAD_URL` | `https://download.clojure.org/install` | Base URL for Clojure CLI downloads |
+| `TRIVY_GPG_KEY_ID` | `B5690EEEBB952194` | GPG Key ID for Trivy validation |
+| `TRIVY_PUBLIC_KEY_URL` | `https://aquasecurity.github.io/trivy-repo/deb/public.key` | URL for Trivy public key |
+| `CHOCOLATEY_CLOJURE_VERSION` | `1.12.1.1550` | Clojure version for Windows Chocolatey install |
+
+### Setting Custom Values
+
+#### For Organization Owners
+1. Go to **Organization Settings** → **Variables** → **Actions**
+2. Add new variables using the names from the table above
+3. These will apply to all repositories in the organization
+
+#### For Repository Maintainers
+1. Go to **Repository Settings** → **Secrets and Variables** → **Actions** → **Variables** tab
+2. Click **New repository variable**
+3. Enter the variable name and custom value
+4. Repository variables override organization variables
+
+#### Example: Using Different Java Version
+```
+Variable name: JAVA_VERSION
+Variable value: 17
+```
+
+#### Example: Pinning Action Versions for Security
+```
+Variable name: CHECKOUT_ACTION_VERSION
+Variable value: v4.1.7
+
+Variable name: CACHE_ACTION_VERSION  
+Variable value: v3.3.3
+```
+
+### Configuration Benefits
+
+- **🔒 Security Control**: Pin specific action versions for security compliance
+- **🔄 Environment Flexibility**: Different values for staging vs production
+- **⚡ Easy Updates**: Change tool versions without modifying workflow files
+- **🎯 Custom Builds**: Override versions for testing or compatibility needs
+- **📋 Centralized Management**: Organization-level defaults with repository overrides
+
+### Best Practices
+
+1. **Security**: Always use specific, verified versions rather than `latest` in production
+2. **Testing**: Test configuration changes in a fork or staging environment first
+3. **Documentation**: Document any custom configurations and their rationale
+4. **Validation**: Ensure SHA256 checksums match when updating Clojure CLI versions
+5. **Monitoring**: Monitor workflow runs after configuration changes
+
+### Fallback Behavior
+
+All variables have sensible defaults, so workflows will continue to work even if no custom variables are configured. The syntax `${{ vars.VARIABLE_NAME || 'default-value' }}` ensures robust fallback behavior.
 
 ## 📝 <a name="license"></a>License
 

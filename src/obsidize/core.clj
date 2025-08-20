@@ -277,17 +277,17 @@
           (shutdown-agents)
           (exit 0))
 
-      ;; Show help when no arguments provided
+      ;; Show help when no arguments provided and return 1
       (and (empty? args) (not (:help options)))
       (do (print-help summary)
           (shutdown-agents)
-          (exit 0))
+          (exit 1))
 
-      ;; Show help when only --verbose flag is provided
+      ;; Show help when only --verbose flag is provided and return 1
       (only-verbose-provided? args)
       (do (print-help summary)
           (shutdown-agents)
-          (exit 0))
+          (exit 1))
 
       ;; Handle parsing errors
       (seq errors)
