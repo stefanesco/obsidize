@@ -1,6 +1,7 @@
 (ns obsidize.data-validation
-  "Robust data validation for Claude exports to prevent NullPointerExceptions" 
-  (:require [clojure.string :as str]))
+  "Robust data validation for Claude exports to prevent NullPointerExceptions"
+  (:require [clojure.string :as str]
+            [obsidize.error :as error]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Data Validation Functions
@@ -37,20 +38,21 @@
 (defn validate-conversation
   "Validate a conversation object and return cleaned/corrected version"
   [conversation]
-  (try
-    (let [uuid (safe-get conversation :uuid "")
-          name (safe-get conversation :name "Untitled Conversation")
-          created_at (safe-get conversation :created_at "1970-01-01T00:00:00Z")
-          updated_at (safe-get conversation :updated_at created_at)
-          chats (safe-get conversation :chats [])]
+  (let [uuid (safe-get conversation :uuid "")
+        name (safe-get conversation :name "Untitled Conversation")
+        created_at (safe-get conversation :created_at "1970-01-01T00:00:00Z")
+        updated_at (safe-get conversation :updated_at created_at)
+        chats (safe-get conversation :chats [])]
 
-      ;; Validate required fields
-      (when (str/blank? uuid)
-        (throw (ex-info "Conversation missing UUID" {:conversation conversation})))
+    ;; Validate required fields
+    (cond
+      (str/blank? uuid)
+      (error/failure "Conversation missing UUID")
 
-      (when-not (valid-timestamp? created_at)
-        (throw (ex-info "Invalid created_at timestamp" {:timestamp created_at})))
+      (not (valid-timestamp? created_at))
+      (error/failure (str "Invalid created_at timestamp: " created_at))
 
+      :else
       ;; Clean and validate chats
       (let [validated-chats (->> chats
                                  (filter map?) ; Only keep map entries
@@ -67,17 +69,13 @@
                                                             created_at)}))))
                                  (filter identity))] ; Remove nil entries
 
-        {:uuid uuid
-         :name name
-         :created_at created_at
-         :updated_at (if (valid-timestamp? updated_at) updated_at created_at)
-         :chats validated-chats
-         :validation-warnings (when (< (count validated-chats) (count chats))
-                                [(str "Filtered out " (- (count chats) (count validated-chats)) " invalid chat entries")])}))
-
-    (catch Exception e
-      {:validation-error (.getMessage e)
-       :original-data conversation})))
+        (error/success {:uuid uuid
+                        :name name
+                        :created_at created_at
+                        :updated_at (if (valid-timestamp? updated_at) updated_at created_at)
+                        :chats validated-chats
+                        :validation-warnings (when (< (count validated-chats) (count chats))
+                                               [(str "Filtered out " (- (count chats) (count validated-chats)) " invalid chat entries")])})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Project Validation
@@ -91,54 +89,47 @@
         content (safe-get doc :content "")
         created_at (safe-get doc :created_at "1970-01-01T00:00:00Z")]
 
-    (when (str/blank? uuid)
-      (throw (ex-info "Document missing UUID" {:document doc})))
-
-    {:uuid uuid
-     :filename (if (str/blank? filename) "document.md" filename)
-     :content content
-     :created_at (if (valid-timestamp? created_at) created_at "1970-01-01T00:00:00Z")}))
+    (if (str/blank? uuid)
+      (error/failure "Document missing UUID")
+      (error/success {:uuid uuid
+                      :filename (if (str/blank? filename) "document.md" filename)
+                      :content content
+                      :created_at (if (valid-timestamp? created_at) created_at "1970-01-01T00:00:00Z")}))))
 
 (defn validate-project
   "Validate a project object and return cleaned/corrected version"
   [project]
-  (try
-    (let [uuid (safe-get project :uuid "")
-          name (safe-get project :name "Untitled Project")
-          description (safe-get project :description "")
-          created_at (safe-get project :created_at "1970-01-01T00:00:00Z")
-          updated_at (safe-get project :updated_at created_at)
-          docs (safe-get project :docs [])]
+  (let [uuid (safe-get project :uuid "")
+        name (safe-get project :name "Untitled Project")
+        description (safe-get project :description "")
+        created_at (safe-get project :created_at "1970-01-01T00:00:00Z")
+        updated_at (safe-get project :updated_at created_at)
+        docs (safe-get project :docs [])]
 
-      ;; Validate required fields
-      (when (str/blank? uuid)
-        (throw (ex-info "Project missing UUID" {:project project})))
+    ;; Validate required fields
+    (cond
+      (str/blank? uuid)
+      (error/failure "Project missing UUID")
 
-      (when-not (valid-timestamp? created_at)
-        (throw (ex-info "Invalid created_at timestamp" {:timestamp created_at})))
+      (not (valid-timestamp? created_at))
+      (error/failure (str "Invalid created_at timestamp: " created_at))
 
+      :else
       ;; Clean and validate documents
-      (let [validated-docs (->> docs
-                                (filter map?) ; Only keep map entries
-                                (map (fn [doc]
-                                       (try
-                                         (validate-project-document doc)
-                                         (catch Exception _
-                                           nil)))) ; Skip invalid docs
-                                (filter identity))]
+      (let [doc-results (->> docs
+                             (filter map?) ; Only keep map entries
+                             (map validate-project-document))
+            successful-docs (map :data (filter :success? doc-results))
+            validation-warnings (when (< (count successful-docs) (count docs))
+                                  [(str "Filtered out " (- (count docs) (count successful-docs)) " invalid documents")])]
 
-        {:uuid uuid
-         :name name
-         :description description
-         :created_at created_at
-         :updated_at (if (valid-timestamp? updated_at) updated_at created_at)
-         :docs validated-docs
-         :validation-warnings (when (< (count validated-docs) (count docs))
-                                [(str "Filtered out " (- (count docs) (count validated-docs)) " invalid documents")])}))
-
-    (catch Exception e
-      {:validation-error (.getMessage e)
-       :original-data project})))
+        (error/success {:uuid uuid
+                        :name name
+                        :description description
+                        :created_at created_at
+                        :updated_at (if (valid-timestamp? updated_at) updated_at created_at)
+                        :docs successful-docs
+                        :validation-warnings validation-warnings})))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Batch Validation Functions
@@ -148,27 +139,29 @@
   "Validate a collection of conversations, filtering out invalid ones"
   [conversations]
   (let [results (->> conversations
-                     (map validate-conversation)
-                     (group-by #(contains? % :validation-error)))]
+                     (map validate-conversation))
+        successful-results (filter :success? results)
+        failed-results (filter #(not (:success? %)) results)]
 
-    {:valid-conversations (get results false [])
-     :invalid-conversations (get results true [])
+    {:valid-conversations (vec (map :data successful-results))
+     :invalid-conversations (vec (map #(assoc {} :validation-error (first (:errors %))) failed-results))
      :total-count (count conversations)
-     :valid-count (count (get results false []))
-     :invalid-count (count (get results true []))}))
+     :valid-count (count successful-results)
+     :invalid-count (count failed-results)}))
 
 (defn validate-projects
   "Validate a collection of projects, filtering out invalid ones"
   [projects]
   (let [results (->> projects
-                     (map validate-project)
-                     (group-by #(contains? % :validation-error)))]
+                     (map validate-project))
+        successful-results (filter :success? results)
+        failed-results (filter #(not (:success? %)) results)]
 
-    {:valid-projects (get results false [])
-     :invalid-projects (get results true [])
+    {:valid-projects (vec (map :data successful-results))
+     :invalid-projects (vec (map #(assoc {} :validation-error (first (:errors %))) failed-results))
      :total-count (count projects)
-     :valid-count (count (get results false []))
-     :invalid-count (count (get results true []))}))
+     :valid-count (count successful-results)
+     :invalid-count (count failed-results)}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Summary and Reporting Functions

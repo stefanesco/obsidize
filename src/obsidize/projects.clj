@@ -3,7 +3,8 @@
   (:require [clojure.string :as str]
             [obsidize.templates :as templates]
             [obsidize.utils :as utils]
-            [obsidize.incremental-projects :as incremental]))
+            [obsidize.incremental-projects :as incremental]
+            [obsidize.error :as error]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers

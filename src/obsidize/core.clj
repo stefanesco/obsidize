@@ -11,6 +11,7 @@
             [obsidize.projects :as projects]
             [obsidize.vault-scanner :as vault-scanner]
             [obsidize.logging :as log]
+            [obsidize.error :as error]
             [obsidize.hints]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -241,10 +242,12 @@
                     (doseq [item (get-in update-plan [:projects :update-existing])]
                       (when verbose (println (str "Updating project: " (:uuid item))))
                       (let [result (projects/process-project-incremental (:claude-data item) (:existing-data item) options)]
-                        (when (and verbose (:success? result))
-                          (let [details (:details result)]
-                            (println (str "  Added " (:new-documents-count details) " new documents, "
-                                          "metadata changed: " (:metadata-changed? details)))))))
+                        (if (:success? result)
+                          (when verbose
+                            (let [details (:data result)]
+                              (println (str "  Added " (:new-documents-count details) " new documents, "
+                                            "metadata changed: " (:metadata-changed? details)))))
+                          (println (str "❌ Failed to update project " (:uuid item) ": " (first (:errors result)))))))
 
                     (println "✅ Processing complete!"))))))
 
@@ -335,20 +338,30 @@
   (exit 1))
 
 (defn handle-normal-execution
-  "Handle normal application execution."
+  "Handle normal application execution with proper error handling."
   [options]
-  ;; Configure logging based on options
-  (when (:debug options)
-    (log/set-debug! true))
-  (when (or (:verbose options) (:debug options))
-    (log/set-verbose! true))
+  (try
+    ;; Configure logging based on options
+    (when (:debug options)
+      (log/set-debug! true))
+    (when (or (:verbose options) (:debug options))
+      (log/set-verbose! true))
 
-  ;; Log runtime info if debug is enabled
-  (when (:debug options)
-    (log/log-runtime-info))
+    ;; Log runtime info if debug is enabled
+    (when (:debug options)
+      (log/log-runtime-info))
 
-  (run options)
-  (shutdown-agents))
+    (run options)
+    (shutdown-agents)
+
+    (catch Exception e
+      (println "❌ Unexpected error occurred:")
+      (println (str "  " (.getMessage e)))
+      (when (:debug options)
+        (println "\nStack trace:")
+        (.printStackTrace e))
+      (shutdown-agents)
+      (exit 1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Command Dispatch System
@@ -398,17 +411,27 @@
 
 (defn -main
   [& args]
-  (let [{:keys [options errors summary arguments]} (cli/parse-opts args cli-options)]
-    (cond
-      ;; Handle dispatch commands first
-      (some options [:version :diagnostics :help])
-      (dispatch-command options summary)
+  (try
+    (let [{:keys [options errors summary arguments]} (cli/parse-opts args cli-options)]
+      (cond
+        ;; Handle dispatch commands first
+        (some options [:version :diagnostics :help])
+        (dispatch-command options summary)
 
-      ;; Validate arguments and run application
-      :else
-      (let [validation-result (validate-arguments options errors summary arguments args)]
-        (when (= validation-result :valid)
-          (run-application options))))))
+        ;; Validate arguments and run application
+        :else
+        (let [validation-result (validate-arguments options errors summary arguments args)]
+          (when (= validation-result :valid)
+            (run-application options)))))
+
+    (catch Exception e
+      (println "❌ Fatal error during application startup:")
+      (println (str "  " (.getMessage e)))
+      (println "\nThis may indicate a serious configuration or system issue.")
+      (println "Try running with --debug for more information.")
+      (println "\nFor help, use: obsidize --help")
+      (shutdown-agents)
+      (System/exit 1))))
 
 ;; Execute the main function if the script is run directly
 (when (= *file* (System/getProperty "babashka.file"))

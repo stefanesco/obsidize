@@ -117,21 +117,23 @@ This is a sample project description for testing incremental updates.
     (let [overview-file (create-test-overview-file sample-project-overview-content)
           result (sut/parse-project-overview overview-file sample-vault-index-project)]
 
-      (is (instance? ProjectOverviewMetadata result))
-      (is (= "project-123" (:project-uuid result)))
-      (is (= "Test Project" (:project-name result)))
-      (is (= "2025-01-01T00:00:00Z" (:project-created-at result)))
-      (is (= "2025-01-02T00:00:00Z" (:project-updated-at result)))
-      (is (= "2025-01-03T00:00:00Z" (:obsidized-at result)))
-      (is (= 3 (:highest-doc-index result)))
+      (is (:success? result))
+      (let [data (:data result)]
+        (is (instance? ProjectOverviewMetadata data))
+        (is (= "project-123" (:project-uuid data)))
+        (is (= "Test Project" (:project-name data)))
+        (is (= "2025-01-01T00:00:00Z" (:project-created-at data)))
+        (is (= "2025-01-02T00:00:00Z" (:project-updated-at data)))
+        (is (= "2025-01-03T00:00:00Z" (:obsidized-at data)))
+        (is (= 3 (:highest-doc-index data)))
 
-      ;; Check existing documents mapping
-      (let [existing-docs (:existing-documents result)]
-        (is (= 3 (count existing-docs)))
-        (is (contains? existing-docs "doc-1-uuid"))
-        (is (= 1 (get-in existing-docs ["doc-1-uuid" :index])))
-        (is (= "001_first-document.md" (get-in existing-docs ["doc-1-uuid" :filename])))
-        (is (= 3 (get-in existing-docs ["doc-3-uuid" :index])))))))
+        ;; Check existing documents mapping
+        (let [existing-docs (:existing-documents data)]
+          (is (= 3 (count existing-docs)))
+          (is (contains? existing-docs "doc-1-uuid"))
+          (is (= 1 (get-in existing-docs ["doc-1-uuid" :index])))
+          (is (= "001_first-document.md" (get-in existing-docs ["doc-1-uuid" :filename])))
+          (is (= 3 (get-in existing-docs ["doc-3-uuid" :index]))))))))
 
 (deftest parse-project-overview-empty-documents-test
   (testing "Handles overview with no documents"
@@ -140,42 +142,50 @@ This is a sample project description for testing incremental updates.
           empty-vault-project (assoc sample-vault-index-project :documents [])
           result (sut/parse-project-overview overview-file empty-vault-project)]
 
-      (is (= 0 (:highest-doc-index result)))
-      (is (empty? (:existing-documents result))))))
+      (is (:success? result))
+      (let [data (:data result)]
+        (is (= 0 (:highest-doc-index data)))
+        (is (empty? (:existing-documents data)))))))
 
 (deftest identify-new-documents-test
   (testing "Correctly identifies new documents"
     (let [overview-file (create-test-overview-file sample-project-overview-content)
-          parsed-overview (sut/parse-project-overview overview-file sample-vault-index-project)
-          result (sut/identify-new-documents sample-claude-project parsed-overview sample-vault-index-project)
-          new-docs (:new-documents result)]
+          parse-result (sut/parse-project-overview overview-file sample-vault-index-project)]
 
-      ;; Should identify 2 new documents (doc-4 and doc-5)
-      (is (= 2 (count new-docs)))
-      (is (= "doc-4-uuid" (:uuid (first new-docs))))
-      (is (= 4 (:assigned-index (first new-docs))))
-      (is (= "doc-5-uuid" (:uuid (second new-docs))))
-      (is (= 5 (:assigned-index (second new-docs))))
+      (is (:success? parse-result))
+      (let [parsed-overview (:data parse-result)
+            result (sut/identify-new-documents sample-claude-project parsed-overview sample-vault-index-project)
+            new-docs (:new-documents result)]
 
-      ;; Should detect metadata changes
-      (is (:project-metadata-changed? result))
+        ;; Should identify 2 new documents (doc-4 and doc-5)
+        (is (= 2 (count new-docs)))
+        (is (= "doc-4-uuid" (:uuid (first new-docs))))
+        (is (= 4 (:assigned-index (first new-docs))))
+        (is (= "doc-5-uuid" (:uuid (second new-docs))))
+        (is (= 5 (:assigned-index (second new-docs))))
 
-      ;; All documents should include existing + new
-      (is (= 5 (count (:all-documents result)))))))
+        ;; Should detect metadata changes
+        (is (:project-metadata-changed? result))
+
+        ;; All documents should include existing + new
+        (is (= 5 (count (:all-documents result))))))))
 
 (deftest identify-new-documents-no-changes-test
   (testing "Handles case with no new documents or metadata changes"
     (let [overview-file (create-test-overview-file sample-project-overview-content)
-          parsed-overview (sut/parse-project-overview overview-file sample-vault-index-project)
-          unchanged-project (assoc sample-claude-project
-                                   :description "This is a sample project description for testing incremental updates."
-                                   :updated_at "2025-01-02T00:00:00Z" ; Same as parsed overview
-                                   :docs (take 3 (:docs sample-claude-project))) ; Only existing docs
-          result (sut/identify-new-documents unchanged-project parsed-overview sample-vault-index-project)]
+          parse-result (sut/parse-project-overview overview-file sample-vault-index-project)]
 
-      (is (empty? (:new-documents result)))
-      (is (not (:project-metadata-changed? result)))
-      (is (= 3 (count (:all-documents result)))))))
+      (is (:success? parse-result))
+      (let [parsed-overview (:data parse-result)
+            unchanged-project (assoc sample-claude-project
+                                     :description "This is a sample project description for testing incremental updates."
+                                     :updated_at "2025-01-02T00:00:00Z" ; Same as parsed overview
+                                     :docs (take 3 (:docs sample-claude-project))) ; Only existing docs
+            result (sut/identify-new-documents unchanged-project parsed-overview sample-vault-index-project)]
+
+        (is (empty? (:new-documents result)))
+        (is (not (:project-metadata-changed? result)))
+        (is (= 3 (count (:all-documents result))))))))
 
 (deftest process-new-documents-test
   (testing "Processes new documents correctly"
@@ -213,23 +223,27 @@ This is a sample project description for testing incremental updates.
   (testing "Updates project overview with new documents"
     (let [temp-file (create-test-overview-file sample-project-overview-content)
           overview-file (create-test-overview-file sample-project-overview-content)
-          parsed-overview (sut/parse-project-overview overview-file sample-vault-index-project)
-          processed-docs [{:document {:uuid "doc-4-uuid" :created_at "2025-01-04T08:00:00Z"}
-                           :filename "004_fourth-document.md"}
-                          {:document {:uuid "doc-5-uuid" :created_at "2025-01-04T09:00:00Z"}
-                           :filename "005_fifth-document.md"}]
-          all-docs (:docs sample-claude-project)
-          result (sut/update-project-overview temp-file sample-claude-project all-docs "2.0.0" parsed-overview processed-docs)]
+          parse-result (sut/parse-project-overview overview-file sample-vault-index-project)]
 
-      (is (true? result))
+      (is (:success? parse-result))
+      (let [parsed-overview (:data parse-result)
+            processed-docs [{:document {:uuid "doc-4-uuid" :created_at "2025-01-04T08:00:00Z"}
+                             :filename "004_fourth-document.md"}
+                            {:document {:uuid "doc-5-uuid" :created_at "2025-01-04T09:00:00Z"}
+                             :filename "005_fifth-document.md"}]
+            all-docs (:docs sample-claude-project)
+            result (sut/update-project-overview temp-file sample-claude-project all-docs "2.0.0" parsed-overview processed-docs)]
 
-      ;; Verify the file was updated
-      (let [updated-content (slurp temp-file)]
-        (is (str/includes? updated-content "obsidize_version: 2.0.0"))
-        (is (str/includes? updated-content "updated_at: 2025-01-05T00:00:00Z"))
-        (is (str/includes? updated-content "This is an updated project description"))
-        (is (str/includes? updated-content "004_fourth-document.md"))
-        (is (str/includes? updated-content "005_fifth-document.md"))))))
+        (is (:success? result))
+        (is (:data result))
+
+        ;; Verify the file was updated
+        (let [updated-content (slurp temp-file)]
+          (is (str/includes? updated-content "obsidize_version: 2.0.0"))
+          (is (str/includes? updated-content "updated_at: 2025-01-05T00:00:00Z"))
+          (is (str/includes? updated-content "This is an updated project description"))
+          (is (str/includes? updated-content "004_fourth-document.md"))
+          (is (str/includes? updated-content "005_fifth-document.md")))))))
 
 (deftest incremental-project-update-integration-test
   (testing "Complete incremental update workflow"
@@ -252,8 +266,8 @@ This is a sample project description for testing incremental updates.
           result (sut/incremental-project-update sample-claude-project vault-index-project temp-dir "2.0.0" options)]
 
       (is (:success? result))
-      (is (= 2 (get-in result [:details :new-documents-count])))
-      (is (get-in result [:details :metadata-changed?]))
+      (is (= 2 (get-in result [:data :new-documents-count])))
+      (is (get-in result [:data :metadata-changed?]))
 
       ;; Verify new document files were created
       (is (.exists (io/file project-dir "004_fourth-document.md")))
@@ -285,8 +299,8 @@ This is a sample project description for testing incremental updates.
           result (sut/incremental-project-update sample-claude-project vault-index-project temp-dir "2.0.0" options)]
 
       (is (:success? result))
-      (is (get-in result [:details :dry-run?]))
-      (is (= 2 (get-in result [:details :new-documents-count])))
+      (is (get-in result [:data :dry-run?]))
+      (is (= 2 (get-in result [:data :new-documents-count])))
 
       ;; Verify no files were actually written
       (is (not (.exists (io/file project-dir "004_fourth-document.md"))))

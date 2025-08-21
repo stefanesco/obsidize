@@ -14,7 +14,8 @@
    - Maintains cross-machine compatibility via filesystem-based state"
   (:require [obsidize.templates :as templates]
             [obsidize.utils :as utils]
-            [obsidize.vault-scanner :as vault-scanner]))
+            [obsidize.vault-scanner :as vault-scanner]
+            [obsidize.error :as error]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Data Structures
@@ -37,28 +38,11 @@
 (defn parse-project-overview
   "Parse existing project overview markdown to extract metadata and document information.
    
-   Reads the overview file and extracts:
-   - Project metadata from YAML frontmatter
-   - Existing document wikilinks from '## Project Documents' section
-   - Highest document index for sequential numbering
-   
-   Args:
-     overview-file-path - String path to the project overview markdown file
-     vault-index-project - Project data from vault-scanner with document info
-     
    Returns:
-     ProjectOverviewMetadata record with:
-     - project-uuid, project-name, etc. from frontmatter  
-     - highest-doc-index - Integer for next document numbering
-     - existing-documents - Map of {uuid {:index :filename :created-at}}
-     
-   Throws:
-     IOException if file cannot be read
-     Exception if frontmatter parsing fails"
+     Error result with parsed ProjectOverviewMetadata or failure with error message"
   [overview-file-path vault-index-project]
   {:pre [(string? overview-file-path)
-         (map? vault-index-project)]
-   :post [(instance? obsidize.incremental_projects.ProjectOverviewMetadata %)]}
+         (map? vault-index-project)]}
   (try
     (let [content (slurp overview-file-path)
           frontmatter-data (vault-scanner/extract-frontmatter content)
@@ -93,23 +77,22 @@
 
           highest-index (if (empty? existing-docs)
                           0
-                          (->> existing-docs vals (map :index) (apply max)))]
+                          (->> existing-docs vals (map :index) (apply max)))
 
-      (map->ProjectOverviewMetadata
-       {:project-uuid (:uuid parsed-frontmatter)
-        :project-name (:project_name parsed-frontmatter)
-        :project-description nil ; Will be extracted from content body if needed
-        :project-created-at (:created_at parsed-frontmatter)
-        :project-updated-at (:updated_at parsed-frontmatter)
-        :obsidized-at (:obsidized_at parsed-frontmatter)
-        :highest-doc-index highest-index
-        :existing-documents existing-docs}))
+          metadata (map->ProjectOverviewMetadata
+                    {:project-uuid (:uuid parsed-frontmatter)
+                     :project-name (:project_name parsed-frontmatter)
+                     :project-description nil ; Will be extracted from content body if needed
+                     :project-created-at (:created_at parsed-frontmatter)
+                     :project-updated-at (:updated_at parsed-frontmatter)
+                     :obsidized-at (:obsidized_at parsed-frontmatter)
+                     :highest-doc-index highest-index
+                     :existing-documents existing-docs})]
+
+      (error/success metadata))
 
     (catch Exception e
-      (throw (ex-info (str "Failed to parse project overview: " overview-file-path)
-                      {:file-path overview-file-path
-                       :error-type :parse-error}
-                      e)))))
+      (error/failure (str "Failed to parse project overview " overview-file-path ": " (.getMessage e))))))
 
 (defn identify-new-documents
   "Compare Claude project documents against vault state to identify new documents.
@@ -213,21 +196,8 @@
 (defn update-project-overview
   "Update project overview file with new documents and metadata.
    
-   Preserves existing overview content while updating:
-   - YAML frontmatter with latest obsidized_at timestamp
-   - Project description if changed
-   - Project Documents section with new wikilinks
-   
-   Args:
-     overview-file-path - String path to overview file
-     claude-project - Map with updated project data
-     all-documents - Sorted list of all documents (existing + new)
-     app-version - String version of obsidize app
-     parsed-overview - ProjectOverviewMetadata with existing state
-     processed-docs - Vector of newly processed documents with filenames
-     
    Returns:
-     Boolean indicating success"
+     Error result with success boolean or failure with error message"
   [overview-file-path claude-project all-documents app-version parsed-overview processed-docs]
   {:pre [(string? overview-file-path)
          (map? claude-project)
@@ -275,30 +245,16 @@
                            nil)] ; tags-section - preserve existing
 
       (spit overview-file-path updated-content)
-      true)
+      (error/success true))
 
     (catch Exception e
-      (println (str "Error updating project overview: " overview-file-path " - " (.getMessage e)))
-      false)))
+      (error/failure (str "Error updating project overview " overview-file-path ": " (.getMessage e))))))
 
 (defn incremental-project-update
   "Main function to perform incremental update of a single project.
    
-   Orchestrates the complete incremental update process:
-   1. Parse existing project overview
-   2. Identify new documents
-   3. Process new documents
-   4. Update project overview
-   
-   Args:
-     claude-project - Map with project data from Claude export
-     vault-index-project - Map with existing vault data from vault-scanner
-     output-dir - String path to vault output directory
-     app-version - String version of obsidize app
-     options - Map with additional options (dry-run, verbose, etc.)
-     
    Returns:
-     Map with :success? boolean and :details about what was processed"
+     Error result with success details or failure with error message"
   [claude-project vault-index-project output-dir app-version options]
   {:pre [(map? claude-project)
          (map? vault-index-project)
@@ -314,60 +270,59 @@
     (when verbose
       (println (str "Starting incremental update for project: " project-name)))
 
-    (try
-      ;; Step 1: Parse existing overview
-      (when verbose (println "  Parsing existing overview..."))
-      (let [parsed-overview (parse-project-overview overview-file vault-index-project)
+    ;; Step 1: Parse existing overview
+    (when verbose (println "  Parsing existing overview..."))
+    (error/bind (parse-project-overview overview-file vault-index-project)
+                (fn [parsed-overview]
+                  ;; Step 2: Identify new documents
+                  (when verbose (println "  Identifying new documents..."))
+                  (let [analysis (identify-new-documents claude-project parsed-overview vault-index-project)
+                        new-docs (:new-documents analysis)
+                        metadata-changed? (:project-metadata-changed? analysis)]
 
-            ;; Step 2: Identify new documents
-            _ (when verbose (println "  Identifying new documents..."))
-            analysis (identify-new-documents claude-project parsed-overview vault-index-project)
-            new-docs (:new-documents analysis)
-            metadata-changed? (:project-metadata-changed? analysis)
+                    ;; Step 3: Process new documents (if any)
+                    (let [processed-docs (if (seq new-docs)
+                                           (do
+                                             (when verbose
+                                               (println (str "  Processing " (count new-docs) " new documents...")))
+                                             (process-new-documents project-folder new-docs project-name app-version))
+                                           [])]
 
-            ;; Step 3: Process new documents (if any)
-            processed-docs (if (seq new-docs)
-                             (do
-                               (when verbose
-                                 (println (str "  Processing " (count new-docs) " new documents...")))
-                               (process-new-documents project-folder new-docs project-name app-version))
-                             [])
+                      ;; Step 4: Write new documents (unless dry-run)
+                      (if (and (seq processed-docs) (not dry-run))
+                        (do
+                          (when verbose (println "  Writing new documents..."))
+                          (doseq [{:keys [file-path content]} processed-docs]
+                            (utils/write-note-if-changed file-path content)))
+                        (when verbose (println "  No new documents to write.")))
 
-            ;; Step 4: Write new documents (unless dry-run)
-            write-results (if (and (seq processed-docs) (not dry-run))
-                            (do
-                              (when verbose (println "  Writing new documents..."))
-                              (doseq [{:keys [file-path content]} processed-docs]
-                                (utils/write-note-if-changed file-path content))
-                              true)
-                            (or dry-run (not (seq processed-docs)))) ; true if no docs to write
+                      ;; Step 5: Update overview (if needed and not dry-run)
+                      (if (and (or (seq new-docs) metadata-changed?) (not dry-run))
+                        (do
+                          (when verbose (println "  Updating project overview..."))
+                          (error/bind (update-project-overview overview-file
+                                                               claude-project
+                                                               (:all-documents analysis)
+                                                               app-version
+                                                               parsed-overview
+                                                               processed-docs)
+                                      (fn [_]
+                                        (when verbose
+                                          (println (str "  Incremental update complete: "
+                                                        (count new-docs) " new documents, "
+                                                        "metadata changed: " metadata-changed?)))
 
-            ;; Step 5: Update overview (if needed and not dry-run)
-            overview-updated? (if (and (or (seq new-docs) metadata-changed?) (not dry-run))
-                                (do
-                                  (when verbose (println "  Updating project overview..."))
-                                  (update-project-overview overview-file
-                                                           claude-project
-                                                           (:all-documents analysis)
-                                                           app-version
-                                                           parsed-overview
-                                                           processed-docs))
-                                true)] ; true if no update needed
+                                        (error/success {:new-documents-count (count new-docs)
+                                                        :processed-documents processed-docs
+                                                        :metadata-changed? metadata-changed?
+                                                        :dry-run? dry-run}))))
+                        (do
+                          (when verbose
+                            (println (str "  Incremental update complete: "
+                                          (count new-docs) " new documents, "
+                                          "metadata changed: " metadata-changed?)))
 
-        (when verbose
-          (println (str "  Incremental update complete: "
-                        (count new-docs) " new documents, "
-                        "metadata changed: " metadata-changed?)))
-
-        {:success? (and write-results overview-updated?)
-         :details {:new-documents-count (count new-docs)
-                   :processed-documents processed-docs
-                   :metadata-changed? metadata-changed?
-                   :dry-run? dry-run}})
-
-      (catch Exception e
-        (println (str "Error in incremental project update for " project-name ": " (.getMessage e)))
-        {:success? false
-         :error {:message (.getMessage e)
-                 :type :incremental-update-error
-                 :project-name project-name}}))))
+                          (error/success {:new-documents-count (count new-docs)
+                                          :processed-documents processed-docs
+                                          :metadata-changed? metadata-changed?
+                                          :dry-run? dry-run})))))))))

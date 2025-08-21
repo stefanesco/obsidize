@@ -36,16 +36,19 @@
                       :updated_at "2025-08-05T11:00:00Z"
                       :chats [{:q "Hello" :a "Hi!" :create_time "2025-08-05T10:30:00Z"}]}
           result (dv/validate-conversation valid-conv)]
-      (is (not (contains? result :validation-error)))
-      (is (= "550e8400-e29b-41d4-a716-446655440000" (:uuid result)))
-      (is (= "Test Chat" (:name result)))
-      (is (= 1 (count (:chats result))))))
+      (is (:success? result))
+      (is (empty? (:errors result)))
+      (let [data (:data result)]
+        (is (= "550e8400-e29b-41d4-a716-446655440000" (:uuid data)))
+        (is (= "Test Chat" (:name data)))
+        (is (= 1 (count (:chats data)))))))
 
   (testing "Missing UUID causes validation error"
     (let [invalid-conv {:name "No UUID"}
           result (dv/validate-conversation invalid-conv)]
-      (is (contains? result :validation-error))
-      (is (contains? result :original-data))))
+      (is (not (:success? result)))
+      (is (seq (:errors result)))
+      (is (= "Conversation missing UUID" (first (:errors result))))))
 
   (testing "Invalid chats are filtered out"
     (let [mixed-conv {:uuid "550e8400-e29b-41d4-a716-446655440000"
@@ -57,17 +60,19 @@
                               "not-a-map" ; Should be filtered
                               {:q "Missing A"}]} ; Should be filtered
           result (dv/validate-conversation mixed-conv)]
-      (is (not (contains? result :validation-error)))
-      (is (= 2 (count (:chats result)))) ; Only 2 valid chats
-      (is (contains? result :validation-warnings))))
+      (is (:success? result))
+      (let [data (:data result)]
+        (is (= 2 (count (:chats data)))) ; Only 2 valid chats
+        (is (contains? data :validation-warnings)))))
 
   (testing "Missing fields get defaults"
     (let [minimal-conv {:uuid "550e8400-e29b-41d4-a716-446655440000"}
           result (dv/validate-conversation minimal-conv)]
-      (is (not (contains? result :validation-error)))
-      (is (= "Untitled Conversation" (:name result)))
-      (is (= "1970-01-01T00:00:00Z" (:created_at result)))
-      (is (= [] (:chats result))))))
+      (is (:success? result))
+      (let [data (:data result)]
+        (is (= "Untitled Conversation" (:name data)))
+        (is (= "1970-01-01T00:00:00Z" (:created_at data)))
+        (is (= [] (:chats data)))))))
 
 (deftest validate-project-test
   (testing "Valid project passes through"
@@ -78,9 +83,11 @@
                       :updated_at "2025-08-05T11:00:00Z"
                       :docs [{:uuid "doc-1" :filename "test.md" :content "# Test" :created_at "2025-08-05T10:30:00Z"}]}
           result (dv/validate-project valid-proj)]
-      (is (not (contains? result :validation-error)))
-      (is (= "Test Project" (:name result)))
-      (is (= 1 (count (:docs result))))))
+      (is (:success? result))
+      (is (empty? (:errors result)))
+      (let [data (:data result)]
+        (is (= "Test Project" (:name data)))
+        (is (= 1 (count (:docs data)))))))
 
   (testing "Invalid documents are filtered out"
     (let [mixed-proj {:uuid "550e8400-e29b-41d4-a716-446655440000"
@@ -90,9 +97,10 @@
                              {:filename "no-uuid.md"} ; Missing UUID - should be filtered
                              "not-a-map"]} ; Not a map - should be filtered
           result (dv/validate-project mixed-proj)]
-      (is (not (contains? result :validation-error)))
-      (is (= 1 (count (:docs result)))) ; Only 1 valid doc
-      (is (contains? result :validation-warnings)))))
+      (is (:success? result))
+      (let [data (:data result)]
+        (is (= 1 (count (:docs data)))) ; Only 1 valid doc
+        (is (contains? data :validation-warnings))))))
 
 (deftest validate-conversations-batch-test
   (testing "Batch conversation validation"

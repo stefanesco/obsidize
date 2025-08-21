@@ -2517,6 +2517,15 @@
       ]
     },
     {
+      "type": "obsidize.conversations$eval1056",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.conversations$eval1064",
       "methods": [
         {
@@ -2545,6 +2554,15 @@
     },
     {
       "type": "obsidize.conversations$eval1109",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.conversations$eval1113",
       "methods": [
         {
           "name": "<init>",
@@ -2598,7 +2616,25 @@
       ]
     },
     {
+      "type": "obsidize.conversations$eval926",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.conversations$eval928",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.conversations$eval932",
       "methods": [
         {
           "name": "<init>",
@@ -2625,7 +2661,25 @@
       ]
     },
     {
+      "type": "obsidize.conversations$eval974",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.conversations$eval994",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.conversations$eval998",
       "methods": [
         {
           "name": "<init>",
@@ -2772,6 +2826,15 @@
       ]
     },
     {
+      "type": "obsidize.core$eval1115",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$eval1199",
       "methods": [
         {
@@ -2826,7 +2889,25 @@
       ]
     },
     {
+      "type": "obsidize.core$eval1248",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$eval1255",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval1259",
       "methods": [
         {
           "name": "<init>",
@@ -2889,6 +2970,15 @@
       ]
     },
     {
+      "type": "obsidize.core$eval1331",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$eval136",
       "methods": [
         {
@@ -2935,6 +3025,15 @@
     },
     {
       "type": "obsidize.core$eval920",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$eval924",
       "methods": [
         {
           "name": "<init>",
@@ -3069,6 +3168,15 @@
       ]
     },
     {
+      "type": "obsidize.core$fn__1263",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$fn__1264",
       "methods": [
         {
@@ -3079,6 +3187,24 @@
     },
     {
       "type": "obsidize.core$fn__1266",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$fn__1268",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$fn__1270",
       "methods": [
         {
           "name": "<init>",
@@ -3306,6 +3432,15 @@
       ]
     },
     {
+      "type": "obsidize.data_pack$eval825",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.data_pack$eval842",
       "methods": [
         {
@@ -3316,6 +3451,15 @@
     },
     {
       "type": "obsidize.data_pack$eval859",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.data_pack$eval863",
       "methods": [
         {
           "name": "<init>",
@@ -3462,6 +3606,15 @@
       ]
     },
     {
+      "type": "obsidize.data_validation$eval791",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.data_validation$print_validation_report",
       "methods": [
         {
@@ -3565,6 +3718,33 @@
     },
     {
       "type": "obsidize.error$combine_results",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.error$eval776",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.error$eval778",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.error$eval782",
       "methods": [
         {
           "name": "<init>",
@@ -3711,6 +3891,15 @@
       ]
     },
     {
+      "type": "obsidize.hints$eval1254",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.hints__init"
     },
     {
@@ -3831,6 +4020,15 @@
       ]
     },
     {
+      "type": "obsidize.incremental_projects$eval1125",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.incremental_projects$eval1127",
       "methods": [
         {
@@ -3840,7 +4038,25 @@
       ]
     },
     {
+      "type": "obsidize.incremental_projects$eval1131",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.incremental_projects$eval1132",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.incremental_projects$eval1136",
       "methods": [
         {
           "name": "<init>",
@@ -3973,6 +4189,33 @@
       ]
     },
     {
+      "type": "obsidize.logging$eval827",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.logging$eval829",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.logging$eval833",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.logging$eval837",
       "methods": [
         {
@@ -3983,6 +4226,24 @@
     },
     {
       "type": "obsidize.logging$eval839",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.logging$eval858",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.logging$eval860",
       "methods": [
         {
           "name": "<init>",
@@ -4183,7 +4444,25 @@
       ]
     },
     {
+      "type": "obsidize.projects$eval1117",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.projects$eval1119",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.projects$eval1123",
       "methods": [
         {
           "name": "<init>",
@@ -4220,6 +4499,15 @@
     },
     {
       "type": "obsidize.projects$eval1226",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.projects$eval1230",
       "methods": [
         {
           "name": "<init>",
@@ -4294,7 +4582,25 @@
       ]
     },
     {
+      "type": "obsidize.templates$eval934",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.templates$eval936",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.templates$eval940",
       "methods": [
         {
           "name": "<init>",
@@ -4495,7 +4801,25 @@
       ]
     },
     {
+      "type": "obsidize.utils$eval976",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.utils$eval978",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.utils$eval982",
       "methods": [
         {
           "name": "<init>",
@@ -4570,7 +4894,25 @@
       ]
     },
     {
+      "type": "obsidize.vault_scanner$eval1000",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.vault_scanner$eval1002",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.vault_scanner$eval1006",
       "methods": [
         {
           "name": "<init>",
