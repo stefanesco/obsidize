@@ -5,79 +5,56 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  # =============================================================================
-  # CONFIGURABLE BUILD ENVIRONMENT VARIABLES
-  # =============================================================================
-  # These variables can be overridden at the runner/repository level for
-  # different environments, tool versions, or security requirements.
-  
-  # -----------------------------------------------------------------------------
-  # Platform and Runner Configuration
-  # -----------------------------------------------------------------------------
-  RUNNER_OS_LINUX: ${{ vars.RUNNER_OS_LINUX || 'ubuntu-latest' }}
-  RUNNER_OS_MACOS: ${{ vars.RUNNER_OS_MACOS || 'macos-latest' }}
-  RUNNER_OS_WINDOWS: ${{ vars.RUNNER_OS_WINDOWS || 'windows-latest' }}
-  
-  # -----------------------------------------------------------------------------
   # Java and Build Tool Versions
-  # -----------------------------------------------------------------------------
   JAVA_VERSION: ${{ vars.JAVA_VERSION || '21' }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'temurin' }}
   BABASHKA_VERSION: ${{ vars.BABASHKA_VERSION || 'latest' }}
   CLJ_KONDO_VERSION: ${{ vars.CLJ_KONDO_VERSION || 'latest' }}
-  
-  # -----------------------------------------------------------------------------
-  # GitHub Actions Versions
-  # -----------------------------------------------------------------------------
-  CHECKOUT_ACTION_VERSION: ${{ vars.CHECKOUT_ACTION_VERSION || 'v5' }}
-  CACHE_ACTION_VERSION: ${{ vars.CACHE_ACTION_VERSION || 'v4' }}
-  SETUP_JAVA_ACTION_VERSION: ${{ vars.SETUP_JAVA_ACTION_VERSION || 'v4' }}
-  SETUP_CLOJURE_ACTION_VERSION: ${{ vars.SETUP_CLOJURE_ACTION_VERSION || '13.4' }}
-  
-  # -----------------------------------------------------------------------------
+
   # Clojure CLI Configuration
-  # -----------------------------------------------------------------------------
   CLOJURE_CLI_VERSION: ${{ vars.CLOJURE_CLI_VERSION || '1.12.1.1550' }}
-  # Generated: 2025-08-20 - curl -fsSL https://download.clojure.org/install/linux-install-1.12.1.1550.sh | sha256sum
   CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || 'aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d' }}
   CLOJURE_DOWNLOAD_URL: ${{ vars.CLOJURE_DOWNLOAD_URL || 'https://download.clojure.org/install' }}
-  
-  # -----------------------------------------------------------------------------
+
   # Security Tool Configuration
-  # -----------------------------------------------------------------------------
-  # Trivy GPG Key ID: B5690EEEBB952194 (current official key from aquasecurity/trivy releases)
   TRIVY_GPG_KEY_ID: ${{ vars.TRIVY_GPG_KEY_ID || 'B5690EEEBB952194' }}
   TRIVY_PUBLIC_KEY_URL: ${{ vars.TRIVY_PUBLIC_KEY_URL || 'https://aquasecurity.github.io/trivy-repo/deb/public.key' }}
-  
-  # -----------------------------------------------------------------------------
+
   # Windows Package Manager Configuration
-  # -----------------------------------------------------------------------------
   CHOCOLATEY_CLOJURE_VERSION: ${{ vars.CHOCOLATEY_CLOJURE_VERSION || '1.12.1.1550' }}
 
 jobs:
   build:
-    name: Build & Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+    name: Build & Test (${{ matrix.runs_on }})
+    runs-on: ${{ matrix.runs_on }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os: 
-          - ubuntu-latest
-          - macos-latest  
-          - windows-latest
+        # Keep labels here; use runner.os for OS-specific conditionals
+        runs_on: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@${{ env.CHECKOUT_ACTION_VERSION }}
+      - uses: actions/checkout@v5
 
-      # Cache Clojure deps
+      # Cache Clojure deps and tool caches
       - name: Cache Clojure dependencies
-        uses: actions/cache@${{ env.CACHE_ACTION_VERSION }}
+        uses: actions/cache@v4
         with:
           path: |
             ~/.m2/repository
             ~/.gitlibs
             ~/.clojure
+            ~/.cache/clojure
+            ~/.cache/babashka
           key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
           restore-keys: |
             ${{ runner.os }}-clojure-
@@ -85,13 +62,13 @@ jobs:
       # Weekly key for Trivy cache (Linux only)
       - name: Get weekly cache key
         id: weekly-key
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         shell: bash
         run: echo "key=$(date -u +'%Y-W%V')" >> "$GITHUB_OUTPUT"
 
       - name: Cache Trivy DB
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/cache@${{ env.CACHE_ACTION_VERSION }}
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
           key: ${{ runner.os }}-trivy-${{ steps.weekly-key.outputs.key }}
@@ -99,118 +76,121 @@ jobs:
             ${{ runner.os }}-trivy-
 
       - name: Set up Java ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@${{ env.SETUP_JAVA_ACTION_VERSION }}
+        uses: actions/setup-java@v4
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
 
       # Babashka + clj-kondo on all OS
       - name: Setup Clojure tools (bb, clj-kondo)
-        uses: DeLaGuardo/setup-clojure@${{ env.SETUP_CLOJURE_ACTION_VERSION }}
+        uses: DeLaGuardo/setup-clojure@v13.4
         with:
           bb: ${{ env.BABASHKA_VERSION }}
           clj-kondo: ${{ env.CLJ_KONDO_VERSION }}
 
       # Clojure CLI per-OS
       - name: Install Clojure CLI (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
           echo "🔒 Downloading Clojure installer with security validation..."
           curl -fsSL "${{ env.CLOJURE_DOWNLOAD_URL }}/linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh" -o clojure.sh
-          
-          # Security: Validate downloaded script checksum
-          echo "${{ env.CLOJURE_INSTALL_SHA256 }} clojure.sh" | sha256sum -c
-          if [ $? -ne 0 ]; then
+
+          # Security: Validate downloaded script checksum in a fail-safe way
+          if ! echo "${{ env.CLOJURE_INSTALL_SHA256 }}  clojure.sh" | sha256sum -c --status; then
             echo "❌ Clojure installer checksum validation failed"
             exit 1
           fi
           echo "✅ Clojure installer checksum validated"
-          
+
           chmod +x clojure.sh
           sudo ./clojure.sh
 
       - name: Install Clojure CLI (macOS)
-        if: matrix.os == 'macos-latest'
+        if: runner.os == 'macOS'
         shell: bash
         run: |
           set -euo pipefail
-          brew update
           brew install clojure/tools/clojure
 
       - name: Install Clojure CLI (Windows)
-        if: matrix.os == 'windows-latest'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          echo "🔒 Installing Clojure CLI via Chocolatey with version validation..."
-          
-          # Install specific version for reproducibility
-          choco install clojure --version ${{ env.CHOCOLATEY_CLOJURE_VERSION }} -y
-          
-          # Verify installation and version
-          clojure -version
-          $installedVersion = clojure -version 2>&1 | Select-String -Pattern "Clojure CLI version (\d+\.\d+\.\d+\.\d+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
-          
-          if ($installedVersion -ne "${{ env.CHOCOLATEY_CLOJURE_VERSION }}") {
-            Write-Error "❌ Clojure version mismatch. Expected: ${{ env.CHOCOLATEY_CLOJURE_VERSION }}, Got: $installedVersion"
-            exit 1
+          $ErrorActionPreference = 'Stop'
+          Write-Output "🔒 Installing Clojure CLI via Chocolatey with version validation..."
+
+          choco install clojure --version $env:CHOCOLATEY_CLOJURE_VERSION -y --no-progress
+
+          # Verify exact installed version via Chocolatey
+          $pkg = choco list --local-only --exact clojure --limit-output
+          if (-not $pkg) {
+            throw "❌ Clojure package not found after installation."
           }
-          
+          $installedVersion = ($pkg -split '\|')[1]
+          if ($installedVersion -ne $env:CHOCOLATEY_CLOJURE_VERSION) {
+            throw "❌ Clojure version mismatch. Expected: $env:CHOCOLATEY_CLOJURE_VERSION, Got: $installedVersion"
+          }
           Write-Output "✅ Clojure CLI $installedVersion installed and validated"
 
       # Trivy only on Linux
       - name: Install Trivy (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         shell: bash
         run: |
           set -euo pipefail
           echo "🔒 Installing Trivy with GPG key validation..."
           sudo apt-get update
           sudo apt-get install -y wget gnupg lsb-release
-          
-          # Security: Download and validate GPG key
+
+          # Security: Download and validate GPG key and Key ID
           wget -qO trivy.key "${{ env.TRIVY_PUBLIC_KEY_URL }}"
-          
-          # Validate GPG key ID (more reliable than fingerprint matching)
           if ! file trivy.key | grep -q "PGP public key"; then
             echo "❌ Downloaded file is not a valid PGP public key"
             exit 1
           fi
+
+          KEYINFO=$(gpg --show-keys --keyid-format LONG trivy.key)
+          echo "$KEYINFO"
+          if ! echo "$KEYINFO" | grep -q "${{ env.TRIVY_GPG_KEY_ID }}"; then
+            echo "❌ Trivy GPG key ID mismatch. Expected ${{ env.TRIVY_GPG_KEY_ID }}"
+            exit 1
+          fi
           echo "✅ Trivy GPG public key validated (Key ID: ${{ env.TRIVY_GPG_KEY_ID }})"
-          
+
           # Import validated key
           sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg < trivy.key
           rm trivy.key
-          
+
           echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
-            | sudo tee /etc/apt/sources.list.d/trivy.list
+            | sudo tee /etc/apt/sources.list.d/trivy.list >/dev/null
           sudo apt-get update && sudo apt-get install -y trivy
 
       # Linux: run full pipeline (includes Trivy/audit per bb task)
       - name: Run CI pipeline (Linux)
-        if: matrix.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         shell: bash
         run: bb ci
 
       # macOS: lint + tests
       - name: Lint (macOS)
-        if: matrix.os == 'macos-latest'
+        if: runner.os == 'macOS'
         shell: bash
         run: bb lint
 
       - name: Test (macOS)
-        if: matrix.os == 'macos-latest'
+        if: runner.os == 'macOS'
         shell: bash
         run: bb test
 
       # Windows: lint + tests using pwsh
       - name: Lint (Windows)
-        if: matrix.os == 'windows-latest'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: bb lint
 
       - name: Test (Windows)
-        if: matrix.os == 'windows-latest'
+        if: runner.os == 'Windows'
         shell: pwsh
         run: bb test
