@@ -25,19 +25,32 @@ class Obsidize < Formula
   {{/LINUX_ENABLED}}
 
   def install
-    # The archive contains a single top-level dir: obsidize-<platform-id>/
-    top = Dir["obsidize-*"].find { |p| File.directory?(p) }
-    odie "Unexpected jlink layout" if top.nil?
+    # Install all contents to libexec
+    libexec.install Dir["*"]
 
-    libexec.install Dir["#{top}/*"]
-
-    # Symlink launchers from top/bin into Homebrew bin
-    if (libexec/"bin/obsidize").exist?
-      bin.install_symlink libexec/"bin/obsidize"
-    end
-    # Optional native (macOS archives include it)
-    if (libexec/"bin/obsidize-native").exist?
-      bin.install_symlink libexec/"bin/obsidize-native"
+    # Create wrapper scripts in bin/
+    # On macOS: prefer native-image, fallback to jlink
+    # On Linux: use jlink binary
+    if OS.mac?
+      if (libexec/"bin/obsidize-native").exist?
+        # Use native binary on macOS for best performance
+        bin.write "obsidize", <<~EOS
+          #!/bin/bash
+          exec "#{libexec}/bin/obsidize-native" "$@"
+        EOS
+      elsif (libexec/"bin/obsidize").exist?
+        # Fallback to jlink binary
+        bin.install_symlink libexec/"bin/obsidize"
+      else
+        odie "No executable found in macOS package"
+      end
+    else
+      # Linux: use jlink binary (more reliable than native)
+      if (libexec/"bin/obsidize").exist?
+        bin.install_symlink libexec/"bin/obsidize"
+      else
+        odie "No jlink executable found in Linux package"
+      end
     end
   end
 

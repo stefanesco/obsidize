@@ -14,11 +14,16 @@
     (is (nil? (sut/create-tags-section [])))
     (is (nil? (sut/create-tags-section nil)))))
 
-(deftest sort-docs-chronologically-test
+(deftest sort-by-timestamp-test
   (testing "Document sorting by created_at"
     (let [docs [{:created_at "2023-01-02"} {:created_at "2023-01-01"} {:created_at "2023-01-03"}]
-          sorted (sut/sort-docs-chronologically docs)]
-      (is (= ["2023-01-01" "2023-01-02" "2023-01-03"] (map :created_at sorted))))))
+          sorted (sut/sort-by-timestamp docs :created_at)]
+      (is (= ["2023-01-01" "2023-01-02" "2023-01-03"] (map :created_at sorted)))))
+
+  (testing "Message sorting by create_time"
+    (let [msgs [{:create_time "2023-01-02T10:00:00Z"} {:create_time "2023-01-01T10:00:00Z"}]
+          sorted (sut/sort-by-timestamp msgs :create_time)]
+      (is (= ["2023-01-01T10:00:00Z" "2023-01-02T10:00:00Z"] (map :create_time sorted))))))
 
 (deftest format-timestamp-test
   (testing "Timestamp formatting"

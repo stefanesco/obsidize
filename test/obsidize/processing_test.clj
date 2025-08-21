@@ -1,10 +1,9 @@
 (ns obsidize.processing-test
-  "Unit tests for shared processing utilities."
+  "Unit tests for consolidated utility functions (formerly processing utilities)."
   (:require [clojure.test :refer [deftest is testing]]
             [clojure.string :as str]
-            [obsidize.processing :as sut]
-            [obsidize.templates :as templates]
-            [obsidize.utils :as utils]))
+            [obsidize.utils :as sut]
+            [obsidize.templates :as templates]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Test Data
@@ -29,26 +28,8 @@
 ;; Timestamp Processing Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftest process-items-with-timestamps-test
-  (testing "Sort items by timestamp with temporary field cleanup"
-    (let [result (sut/process-items-with-timestamps
-                  test-messages
-                  :create_time
-                  :create_time)]
-      (is (= 3 (count result)))
-      (is (= "2024-01-01T08:00:00Z" (:create_time (first result))))
-      (is (= "2024-01-01T12:00:00Z" (:create_time (last result))))
-      ;; Ensure parsed-timestamp is removed
-      (is (nil? (:parsed-timestamp (first result))))))
-
-  (testing "Empty collection"
-    (let [result (sut/process-items-with-timestamps [] :create_time :create_time)]
-      (is (empty? result))))
-
-  (testing "Items without timestamps handled gracefully"
-    (let [items [{:id 1} {:id 2 :create_time "2024-01-01T10:00:00Z"}]
-          result (sut/process-items-with-timestamps items :create_time :create_time)]
-      (is (= 2 (count result))))))
+;; NOTE: process-items-with-timestamps was removed as over-engineered
+;; Functionality merged into sort-by-timestamp for simplicity
 
 (deftest extract-latest-timestamp-test
   (testing "Extract latest timestamp from collection"
@@ -77,61 +58,47 @@
 ;; Frontmatter Generation Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftest generate-frontmatter-test
-  (testing "Basic frontmatter generation with merge"
-    (let [template {:template-field "value"}
-          data {:data-field "data-value"}
-          result (sut/generate-frontmatter template data)]
-      (is (= "value" (:template-field result)))
-      (is (= "data-value" (:data-field result)))))
+;; NOTE: generate-frontmatter was simplified into create-frontmatter-with-timestamps
+;; which now handles the common use case more directly
 
-  (testing "Data overwrites template values"
-    (let [template {:shared-field "template-value"}
-          data {:shared-field "data-value"}
-          result (sut/generate-frontmatter template data)]
-      (is (= "data-value" (:shared-field result))))))
-
-(deftest generate-frontmatter-with-options-test
-  (testing "Add tags and links when present"
-    (let [options {:tags ["ai" "claude"] :links ["[[Notes]]" "[[AI Tools]]"]}
-          result (sut/generate-frontmatter-with-options base-frontmatter options)]
+(deftest create-frontmatter-with-options-test
+  (testing "Add tags and links when present with 3-arity function"
+    (let [template templates/conversation-frontmatter
+          data-map {:uuid "test-uuid" :created_at "2024-01-01T10:00:00Z"}
+          options {:tags ["ai" "claude"] :links ["[[Notes]]" "[[AI Tools]]"]}
+          result (sut/create-frontmatter-with-timestamps template data-map options)]
+      (is (= "test-uuid" (:uuid result)))
+      (is (= "2024-01-01T10:00:00Z" (:created_at result)))
       (is (= ["ai" "claude"] (:tags result)))
-      (is (= ["[[Notes]]" "[[AI Tools]]"] (:links result)))))
+      (is (= ["[[Notes]]" "[[AI Tools]]"] (:links result)))
+      (is (string? (:obsidized_at result)))))
 
   (testing "Handle comma-separated strings"
-    (let [options {:tags "ai,claude" :links "[[Notes]],[[AI Tools]]"}
-          result (sut/generate-frontmatter-with-options base-frontmatter options)]
+    (let [template templates/conversation-frontmatter
+          data-map {:uuid "test-uuid" :created_at "2024-01-01T10:00:00Z"}
+          options {:tags "ai,claude" :links "[[Notes]],[[AI Tools]]"}
+          result (sut/create-frontmatter-with-timestamps template data-map options)]
       (is (= ["ai" "claude"] (:tags result)))
       (is (= ["[[Notes]]" "[[AI Tools]]"] (:links result)))))
 
   (testing "Skip empty tags and links"
-    (let [options {:tags [] :links nil}
-          result (sut/generate-frontmatter-with-options base-frontmatter options)]
+    (let [template templates/conversation-frontmatter
+          data-map {:uuid "test-uuid" :created_at "2024-01-01T10:00:00Z"}
+          options {:tags [] :links nil}
+          result (sut/create-frontmatter-with-timestamps template data-map options)]
       (is (not (contains? result :tags)))
       (is (not (contains? result :links)))))
 
-  (testing "No options provided"
-    (let [result (sut/generate-frontmatter-with-options base-frontmatter {})]
-      (is (= base-frontmatter result)))))
-
-(deftest create-frontmatter-with-timestamps-and-options-test
-  (testing "Complete frontmatter with timestamps and options"
+  (testing "2-arity function without options"
     (let [template templates/conversation-frontmatter
           data-map {:uuid "test-uuid" :created_at "2024-01-01T10:00:00Z"}
-          options {:tags ["test"] :app-version "1.2.3"}
-          result (sut/create-frontmatter-with-timestamps-and-options template data-map options)]
+          result (sut/create-frontmatter-with-timestamps template data-map)]
       (is (= "test-uuid" (:uuid result)))
       (is (= "2024-01-01T10:00:00Z" (:created_at result)))
-      (is (= ["test"] (:tags result)))
-      (is (string? (:obsidized_at result)))))
-
-  (testing "Works without options"
-    (let [template templates/project-overview-frontmatter
-          data-map {:uuid "project-uuid" :project_name "Test Project"}
-          result (sut/create-frontmatter-with-timestamps-and-options template data-map {})]
-      (is (= "project-uuid" (:uuid result)))
-      (is (= "Test Project" (:project_name result)))
       (is (string? (:obsidized_at result))))))
+
+;; NOTE: create-frontmatter-with-timestamps-and-options functionality
+;; is now integrated into create-frontmatter-with-timestamps 3-arity version
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Content Processing Tests
@@ -148,15 +115,15 @@
       (is (str/includes? result "uuid: test-uuid"))
       (is (str/includes? result "# Test Title")))))
 
-(deftest process-and-sort-by-timestamp-test
+(deftest sort-by-timestamp-test
   (testing "Sort documents by created_at"
-    (let [result (sut/process-and-sort-by-timestamp test-documents :created_at)]
+    (let [result (sut/sort-by-timestamp test-documents :created_at)]
       (is (= 3 (count result)))
       (is (= "Doc A" (:title (first result))))
       (is (= "Doc C" (:title (last result))))))
 
   (testing "Sort messages by create_time"
-    (let [result (sut/process-and-sort-by-timestamp test-messages :create_time)]
+    (let [result (sut/sort-by-timestamp test-messages :create_time)]
       (is (= 3 (count result)))
       (is (= "Third message" (:text (first result))))
       (is (= "Second message" (:text (last result)))))))
@@ -215,8 +182,8 @@
 ;; Integration Tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(deftest processing-utilities-integration-test
-  (testing "Complete workflow using multiple utilities"
+(deftest utilities-integration-test
+  (testing "Complete workflow using consolidated utility functions"
     (let [;; Raw data simulation
           raw-data {:uuid "conv-123" :name nil :chats test-messages}
           defaults {:name "Untitled Conversation" :description ""}
@@ -227,12 +194,12 @@
           ;; Step 2: Extract latest timestamp
           latest-time (sut/extract-latest-timestamp (:chats safe-data) :create_time)
 
-          ;; Step 3: Sort messages chronologically
-          sorted-messages (sut/process-and-sort-by-timestamp (:chats safe-data) :create_time)
+          ;; Step 3: Sort messages chronologically  
+          sorted-messages (sut/sort-by-timestamp (:chats safe-data) :create_time)
 
           ;; Step 4: Generate frontmatter with options
           options {:tags ["test"] :links ["[[Notes]]"]}
-          frontmatter (sut/create-frontmatter-with-timestamps-and-options
+          frontmatter (sut/create-frontmatter-with-timestamps
                        templates/conversation-frontmatter
                        {:uuid (:uuid safe-data)
                         :created_at (first (map :create_time sorted-messages))

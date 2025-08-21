@@ -1,5 +1,5 @@
 (ns obsidize.logging
-  "Enhanced logging and diagnostics for Obsidize, with native-image compatibility" 
+  "Enhanced logging and diagnostics for Obsidize, with native-image compatibility"
   (:require [clojure.java.io :as io]
             [clojure.string :as str]))
 

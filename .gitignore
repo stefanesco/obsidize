@@ -40,6 +40,7 @@ CLAUDE.md
 .mcp.json
 .gemini/
 .clojure-mcp/
+*-REPORT.md
 
 # Node
 package-lock.json

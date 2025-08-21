@@ -16,7 +16,7 @@
                     (fn [p] (swap! dirs conj p)
                       (proxy [java.io.File] [p]
                         (getPath [] p)))
-                    obsidize.utils/sort-docs-chronologically identity
+                    obsidize.utils/sort-by-timestamp (fn [docs timestamp-key] (sort-by timestamp-key docs))
                     obsidize.utils/sanitize-filename identity
                     obsidize.utils/create-tags-section (fn [tags] (when (seq tags) (str "\nTAGS:" (pr-str tags))))
                     obsidize.utils/create-frontmatter-with-timestamps (fn [base m] (merge base m))
@@ -87,7 +87,7 @@
       (with-redefs [println (fn [& xs] (swap! msgs conj (str/join " " xs)))
                     obsidize.utils/ensure-directory
                     (fn [p] (proxy [java.io.File] [p] (getPath [] p)))
-                    obsidize.utils/sort-docs-chronologically identity
+                    obsidize.utils/sort-by-timestamp (fn [docs timestamp-key] (sort-by timestamp-key docs))
                     obsidize.utils/sanitize-filename identity
                     obsidize.utils/create-tags-section (constantly nil)
                     obsidize.utils/create-frontmatter-with-timestamps merge
@@ -110,7 +110,7 @@
     (let [writes (atom 0)]
       (with-redefs [obsidize.utils/ensure-directory
                     (fn [p] (proxy [java.io.File] [p] (getPath [] p)))
-                    obsidize.utils/sort-docs-chronologically identity
+                    obsidize.utils/sort-by-timestamp (fn [docs timestamp-key] (sort-by timestamp-key docs))
                     obsidize.utils/sanitize-filename identity
                     obsidize.utils/create-tags-section (constantly nil)
                     obsidize.utils/create-frontmatter-with-timestamps merge

@@ -1,7 +1,14 @@
 # Obsidize
 
-Obsidize is a tool that aims to make it easy to import and maintain Claude conversation history and project data in Obsidian, converting the raw json files that Anthropic provides into a structured folder with proper linking and metadata, and implementing an update process that only process what's actually changed.
+[![CI Status](https://github.com/stefanesco/obsidize/workflows/CI/badge.svg)](https://github.com/stefanesco/obsidize/actions/workflows/ci.yml)
+[![Release](https://github.com/stefanesco/obsidize/workflows/Create%20Release/badge.svg)](https://github.com/stefanesco/obsidize/actions/workflows/release.yml)
+[![Latest Release](https://img.shields.io/github/v/release/stefanesco/obsidize?include_prereleases&label=release)](https://github.com/stefanesco/obsidize/releases/latest)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Clojure](https://img.shields.io/badge/Clojure-1.12.1-green.svg)](https://clojure.org)
 
+Obsidize is a tool that aims to make it easy to import and maintain in Obsidian conversation history and project data exported from LLMs - starting with Claude, converting the raw json files that Anthropic provides into a structured folder with proper linking and metadata, and implementing an update process that only process what's actually changed.
+
+> Disclaimer:
 > While I followed software engineering best practices in developing and packaging this application it remains a personal project and may not cover all edge cases.
 >
 > The code, documentation and binaries are provided in the hope of being useful but without any warranty.
@@ -21,13 +28,20 @@ Obsidize is a tool that aims to make it easy to import and maintain Claude conve
 - **🔍 Dry Run Mode**: Allows to preview changes before applying them
 - **📊 Progress Reporting**: Clear feedback on what's being processed and updated
 
+## &#128190; Obsidize Package
+
+Obsidize is available for macOS, Linux and Windows:
+- on macOS: Homebrew support (based on native-image built with GraalVM - fast, native performance), self-contained binary (built with jlink - JRE+jar) and stand-alone jar
+- on Linux: Homebrew support (based on the self-contained binary built with jlink - JRE+jar) and stand-alone jar
+- on Windows: self-contained binary (built with jlink - JRE+jar) and stand-alone jar
 
 ## 🚀 Quick Install
 
-Obsidize is available as a binary via Homebrew (recommended for macOS users). For Linux, use homebrew if available or download the binaries from GitHub releases.
-
 ### Via Homebrew (macOS/Linux)
 
+If not done already, install [Homebrew](https://brew.sh/)
+
+Install/Update `obsidize`:
 ```bash
 # Install
 brew install stefanesco/obsidize/obsidize
@@ -36,32 +50,49 @@ brew install stefanesco/obsidize/obsidize
 brew upgrade obsidize
 ```
 
-### Manual Download (macOS/Linux)
+### Manual Download (macOS/Linux/Windows)
 
-1. Go to the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest).
-2. Download the binary for your platform (e.g., `obsidize-macos-amd64.tar.gz` or `obsidize-linux-amd64.tar.gz`).
-3. Extract and add to your PATH:
+From the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest) download the package for your platform (e.g., `obsidize-macos-amd64.tar.gz` or `obsidize-linux-amd64.tar.gz`).
 
-   ```bash
+Extract and add to your PATH:
+
+a. For macOS/Linux:
+
+```bash
    tar -xzf obsidize-<platform>.tar.gz
    mv obsidize /usr/local/bin/  # Or any directory in your PATH
    ```
 
-4. To update: Download the new version and replace the binary.
+b. For Windows:
 
-Verify installation:
+```powershell
+   Expand-Archive obsidize-<platform>.zip -DestinationPath C:\Program Files\obsidize
+   ```
+
+To manually update: Download the new version and replace the binary.
+
+#### Verify installation
+
+- a. Display the `obsidize` usage/help message:
 
 ```bash
 obsidize --help
 ```
+
+- b. Display diagnostics information:
+
+```bash
+obsidize --diagnostics
+```
+
+Success! You are now ready to use `obsidize`.
 
 ## ✨ Quick Usage
 
 ### Export your data
 
 1. In **Claude**, go to your account -> ```Settings``` -> ```Privacy``` -> ```Export Data```
-2. Use the download link to retrieve your data and save it as either a ```.dms``` file or an uncompressed folder.
-3. the downloaded data should contain 3 files: ```conversations.json```, ```projects.json```, and ```users.json``` (don't worry about this - ```obsidize``` will handle it).
+2. Use the download link and retrieve the data: either as an archive (e.g. ```.dms```) or an uncompressed folder. The downloaded data should contain 3 files: ```conversations.json```, ```projects.json```, and ```users.json``` (```obsidize``` reads only ```conversations.json``` and ```projects.json```).
 
 ### First-Time Import
 
@@ -526,6 +557,7 @@ bb test                 # Test suite execution
 ```
 
 **Key Features**:
+
 - **Multi-platform testing** across Linux, macOS, Windows
 - **Security scanning** with Trivy (Linux only)
 - **Dependency auditing** with antq (Linux only) 
@@ -538,7 +570,7 @@ bb test                 # Test suite execution
 vars:
   JAVA_VERSION: "21"                    # Override Java version
   CLOJURE_CLI_VERSION: "1.12.1.1550"   # Pin Clojure CLI version
-  TRIVY_GPG_KEY_ID: "B5690EEEBB952194" # Override security keys
+  TRIVY_GPG_KEY_ID: "E9D0A3616276FA6C" # Override security keys
 ```
 
 #### 3. **Release Build**
@@ -1030,7 +1062,7 @@ The build system uses verified checksums and GPG keys for security validation. T
 | Component | Type | Value | Verification Date |
 |-----------|------|-------|-------------------|
 | **Clojure CLI** | SHA256 | `aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d` | 2025-08-20 |
-| **Trivy** | GPG Key ID | `B5690EEEBB952194` | 2025-08-20 |
+| **Trivy** | GPG Key ID | `E9D0A3616276FA6C` | 2025-08-20 |
 | **Chocolatey Clojure** | Version | `1.12.1.1550` | 2025-08-20 |
 
 #### Verification Process
@@ -1057,7 +1089,7 @@ wget -qO trivy.key https://aquasecurity.github.io/trivy-repo/deb/public.key
 file trivy.key
 # Should output: trivy.key: PGP public key block Public-Key (old)
 
-# The key ID B5690EEEBB952194 is from official Trivy releases
+# The key ID E9D0A3616276FA6C is from official Trivy releases
 # Verify at: https://github.com/aquasecurity/trivy/releases
 
 # Clean up
@@ -1152,7 +1184,7 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 | `CLOJURE_CLI_VERSION` | `1.12.1.1550` | Clojure CLI version to install |
 | `CLOJURE_INSTALL_SHA256` | `aea202cd...` | SHA256 checksum for Linux installer validation |
 | `CLOJURE_DOWNLOAD_URL` | `https://download.clojure.org/install` | Base URL for Clojure CLI downloads |
-| `TRIVY_GPG_KEY_ID` | `B5690EEEBB952194` | GPG Key ID for Trivy validation |
+| `TRIVY_GPG_KEY_ID` | `E9D0A3616276FA6C` | GPG Key ID for Trivy validation |
 | `TRIVY_PUBLIC_KEY_URL` | `https://aquasecurity.github.io/trivy-repo/deb/public.key` | URL for Trivy public key |
 | `CHOCOLATEY_CLOJURE_VERSION` | `1.12.1.1550` | Clojure version for Windows Chocolatey install |
 

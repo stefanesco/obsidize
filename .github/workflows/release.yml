@@ -238,63 +238,83 @@ jobs:
       - name: Build and validate with e2e tests (bb validate-release)
         run: bb validate-release
 
-      # --- Upload native-only tarballs (macOS + Linux where present) ---
-      - name: Stage native artifact
+      # --- Stage comprehensive platform tarballs with all artifacts ---
+      - name: Stage platform tarball with all artifacts
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(echo "${RELEASE_VERSION}" | sed 's/^v//')"
           RELEASE_DIR="target/release/${VERSION}"
           PLATFORM_ID="${{ matrix.platform_id }}"
+          OS_ID="${{ matrix.os_id }}"
 
-          # Native will exist on macOS (and possibly Linux in future)
-          if [[ ! -f "${RELEASE_DIR}/obsidize-native" ]]; then
-            echo "No native image found at ${RELEASE_DIR}/obsidize-native. Skipping native tarball."
-            exit 0
-          fi
+          echo "📦 Creating comprehensive tarball for ${OS_ID} (${PLATFORM_ID})"
+          STAGE_DIR="$(mktemp -d)/obsidize-${VERSION}-${PLATFORM_ID}"
+          mkdir -p "${STAGE_DIR}/bin"
 
-          echo "✅ Found native image, creating tarball for platform: ${PLATFORM_ID}"
-          STAGE_DIR="$(mktemp -d)"
-          install -m 0755 "${RELEASE_DIR}/obsidize-native" "${STAGE_DIR}/obsidize"
-          TAR="obsidize-native-${VERSION}-${PLATFORM_ID}.tar.gz"
-          tar -C "$STAGE_DIR" -czf "$TAR" obsidize
-          shasum -a 256 "$TAR" | awk '{print $1}' > "${TAR}.sha256"
-          
-          echo "✅ Created native tarball: $TAR"
-
-      - name: Upload native artifact
-        if: hashFiles('obsidize-native-*.tar.gz') != ''
-        uses: actions/upload-artifact@${{ env.UPLOAD_ARTIFACT_ACTION_VERSION }}
-        with:
-          name: native-${{ matrix.os_id }}-${{ matrix.arch }}
-          path: |
-            obsidize-native-*.tar.gz
-            obsidize-native-*.tar.gz.sha256
-          if-no-files-found: ignore
-          retention-days: 7
-
-      # --- Upload jlink archive produced by build.clj (target/release/<version>/obsidize-<version>-<platform>.tar.gz|zip) ---
-      - name: Locate jlink archive
-        id: jlink_paths
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(echo "${RELEASE_VERSION}" | sed 's/^v//')"
-          RELEASE_DIR="target/release/${VERSION}"
-          FILE="$(ls "${RELEASE_DIR}"/obsidize-"${VERSION}"-* 2>/dev/null | head -n1 || true)"
-          if [[ -z "$FILE" ]]; then
-            echo "No jlink archive found in $RELEASE_DIR"
+          # Always include standalone JAR
+          if [[ -f "${RELEASE_DIR}/obsidize-standalone.jar" ]]; then
+            cp "${RELEASE_DIR}/obsidize-standalone.jar" "${STAGE_DIR}/"
+            echo "✅ Added standalone JAR"
+          else
+            echo "❌ Missing standalone JAR at ${RELEASE_DIR}/obsidize-standalone.jar"
             exit 1
           fi
-          echo "archive=$FILE" >> "$GITHUB_OUTPUT"
 
-      - name: Upload jlink archive
+          # Include native image for macOS
+          if [[ "${OS_ID}" == "macOS" && -f "${RELEASE_DIR}/obsidize-native" ]]; then
+            install -m 0755 "${RELEASE_DIR}/obsidize-native" "${STAGE_DIR}/bin/obsidize-native"
+            echo "✅ Added native image for macOS"
+          fi
+
+          # Extract and include jlink distribution for all platforms
+          JLINK_ARCHIVE="$(ls "${RELEASE_DIR}"/obsidize-"${VERSION}"-${PLATFORM_ID}.* 2>/dev/null | head -n1 || true)"
+          if [[ -n "$JLINK_ARCHIVE" ]]; then
+            echo "✅ Found jlink archive: $JLINK_ARCHIVE"
+            TEMP_EXTRACT="$(mktemp -d)"
+            
+            if [[ "$JLINK_ARCHIVE" == *.zip ]]; then
+              unzip -q "$JLINK_ARCHIVE" -d "$TEMP_EXTRACT"
+            else
+              tar -xf "$JLINK_ARCHIVE" -C "$TEMP_EXTRACT"
+            fi
+            
+            # Find the extracted jlink directory
+            JLINK_DIR="$(find "$TEMP_EXTRACT" -maxdepth 1 -type d -name "obsidize-*" | head -n1)"
+            if [[ -n "$JLINK_DIR" ]]; then
+              # Copy jlink contents to our stage directory
+              cp -r "$JLINK_DIR"/* "${STAGE_DIR}/"
+              echo "✅ Added jlink distribution"
+            else
+              echo "❌ Could not find jlink directory in archive"
+              exit 1
+            fi
+            
+            rm -rf "$TEMP_EXTRACT"
+          else
+            echo "❌ No jlink archive found for ${PLATFORM_ID}"
+            exit 1
+          fi
+
+          # Create final tarball
+          TAR_NAME="obsidize-${VERSION}-${PLATFORM_ID}.tar.gz"
+          tar -C "$(dirname "${STAGE_DIR}")" -czf "$TAR_NAME" "$(basename "${STAGE_DIR}")"
+          shasum -a 256 "$TAR_NAME" | awk '{print $1}' > "${TAR_NAME}.sha256"
+          
+          echo "✅ Created comprehensive tarball: $TAR_NAME"
+          echo "Contents:"
+          tar -tzf "$TAR_NAME" | head -20
+
+      - name: Upload comprehensive platform artifact
         uses: actions/upload-artifact@${{ env.UPLOAD_ARTIFACT_ACTION_VERSION }}
         with:
-          name: jlink-${{ matrix.os_id }}-${{ matrix.arch }}
-          path: ${{ steps.jlink_paths.outputs.archive }}
+          name: platform-${{ matrix.os_id }}-${{ matrix.arch }}
+          path: |
+            obsidize-*.tar.gz
+            obsidize-*.tar.gz.sha256
           if-no-files-found: error
           retention-days: 7
+
 
   validate-packages:
     name: E2E Package Validation (${{ matrix.name }})
@@ -327,7 +347,7 @@ jobs:
       - name: Download artifacts for validation
         uses: actions/download-artifact@${{ env.DOWNLOAD_ARTIFACT_ACTION_VERSION }}
         with:
-          pattern: '*-${{ matrix.os_id }}-${{ matrix.arch }}'
+          pattern: 'platform-${{ matrix.os_id }}-${{ matrix.arch }}'
           merge-multiple: true
           path: validation-artifacts
 
@@ -381,28 +401,50 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "📦 Setting up artifacts for e2e validation..."
+          echo "📦 Setting up comprehensive artifacts for e2e validation..."
           ls -la validation-artifacts/ || echo "No artifacts found"
           
           # Create target structure expected by e2e tests
           mkdir -p target/release/test-validation
           
-          # Move artifacts to expected locations for testing
-          if [[ -f validation-artifacts/obsidize-native-*.tar.gz ]]; then
-            echo "✅ Found native tarball"
-            tar -xzf validation-artifacts/obsidize-native-*.tar.gz -C target/release/test-validation/
-            if [[ -f target/release/test-validation/obsidize ]]; then
-              mv target/release/test-validation/obsidize target/release/test-validation/obsidize-native
-            fi
-          fi
-          
-          if [[ -f validation-artifacts/obsidize-*.tar.gz ]] && [[ ! validation-artifacts/obsidize-*.tar.gz =~ "native" ]]; then
-            echo "✅ Found jlink archive"
-            # For jlink archives, we'll extract and test the included JAR and scripts
+          # Extract the comprehensive platform tarball
+          PLATFORM_TAR="$(find validation-artifacts -name "obsidize-*.tar.gz" | head -n1)"
+          if [[ -n "$PLATFORM_TAR" ]]; then
+            echo "✅ Found platform tarball: $PLATFORM_TAR"
+            tar -xzf "$PLATFORM_TAR" -C target/release/test-validation/ --strip-components=1
+            echo "✅ Extracted comprehensive platform artifacts"
+          else
+            echo "❌ No platform tarball found"
+            exit 1
           fi
           
           echo "Contents of target/release/test-validation/:"
           ls -la target/release/test-validation/ || echo "Empty"
+          
+          # Verify expected artifacts are present
+          if [[ -f target/release/test-validation/obsidize-standalone.jar ]]; then
+            echo "✅ Found standalone JAR"
+          else
+            echo "❌ Missing standalone JAR"
+            exit 1
+          fi
+          
+          if [[ -f target/release/test-validation/bin/obsidize ]]; then
+            echo "✅ Found jlink launcher script"
+          else
+            echo "❌ Missing jlink launcher script"
+            exit 1
+          fi
+          
+          # Check for native binary on macOS
+          if [[ "${{ matrix.os_id }}" == "macOS" ]]; then
+            if [[ -f target/release/test-validation/bin/obsidize-native ]]; then
+              echo "✅ Found native binary for macOS"
+            else
+              echo "❌ Missing native binary for macOS"
+              exit 1
+            fi
+          fi
 
       - name: Run e2e validation tests
         shell: bash
@@ -422,7 +464,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@${{ env.DOWNLOAD_ARTIFACT_ACTION_VERSION }}
         with:
-          pattern: '*'
+          pattern: 'platform-*'
           merge-multiple: true
 
       - name: List downloaded files
@@ -433,12 +475,9 @@ jobs:
         uses: softprops/action-gh-release@${{ env.GH_RELEASE_ACTION_VERSION }}
         with:
           files: |
-            # native (per-arch tarball)
-            obsidize-native-*.tar.gz
-            obsidize-native-*.tar.gz.sha256
-            # jlink archives
+            # comprehensive platform tarballs (include standalone JAR, jlink, and native where available)
             obsidize-*.tar.gz
-            obsidize-*.zip
+            obsidize-*.tar.gz.sha256
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
         env:
@@ -450,10 +489,10 @@ jobs:
     needs: release
     if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
     steps:
-      - name: Download jlink artifacts
+      - name: Download platform artifacts for Homebrew
         uses: actions/download-artifact@${{ env.DOWNLOAD_ARTIFACT_ACTION_VERSION }}
         with:
-          pattern: jlink-*
+          pattern: 'platform-*'
           merge-multiple: true
           path: artifacts
 

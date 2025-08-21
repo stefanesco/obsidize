@@ -1,10 +1,9 @@
 (ns obsidize.projects
-  "convert Claude projects JSON export into a structured Obsidian-ready file structure."
+  "Convert Claude projects JSON export into a structured Obsidian-ready file structure."
   (:require [clojure.string :as str]
             [obsidize.templates :as templates]
             [obsidize.utils :as utils]
-            [obsidize.incremental-projects :as incremental]
-            [obsidize.error :as error]))
+            [obsidize.incremental-projects :as incremental]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Helpers
@@ -42,7 +41,7 @@
 
         ;; 2) Sort docs and generate document files
         docs (or (:docs project) [])
-        sorted-docs (utils/sort-docs-chronologically docs)
+        sorted-docs (utils/sort-by-timestamp docs :created_at)
 
         doc-filenames
         (doall

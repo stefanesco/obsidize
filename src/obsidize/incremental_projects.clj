@@ -278,51 +278,50 @@
                   (when verbose (println "  Identifying new documents..."))
                   (let [analysis (identify-new-documents claude-project parsed-overview vault-index-project)
                         new-docs (:new-documents analysis)
-                        metadata-changed? (:project-metadata-changed? analysis)]
+                        metadata-changed? (:project-metadata-changed? analysis)
+                        ;; Step 3: Process new documents (if any)
+                        processed-docs (if (seq new-docs)
+                                         (do
+                                           (when verbose
+                                             (println (str "  Processing " (count new-docs) " new documents...")))
+                                           (process-new-documents project-folder new-docs project-name app-version))
+                                         [])]
 
-                    ;; Step 3: Process new documents (if any)
-                    (let [processed-docs (if (seq new-docs)
-                                           (do
-                                             (when verbose
-                                               (println (str "  Processing " (count new-docs) " new documents...")))
-                                             (process-new-documents project-folder new-docs project-name app-version))
-                                           [])]
+                    ;; Step 4: Write new documents (unless dry-run)
+                    (if (and (seq processed-docs) (not dry-run))
+                      (do
+                        (when verbose (println "  Writing new documents..."))
+                        (doseq [{:keys [file-path content]} processed-docs]
+                          (utils/write-note-if-changed file-path content)))
+                      (when verbose (println "  No new documents to write.")))
 
-                      ;; Step 4: Write new documents (unless dry-run)
-                      (if (and (seq processed-docs) (not dry-run))
-                        (do
-                          (when verbose (println "  Writing new documents..."))
-                          (doseq [{:keys [file-path content]} processed-docs]
-                            (utils/write-note-if-changed file-path content)))
-                        (when verbose (println "  No new documents to write.")))
+                    ;; Step 5: Update overview (if needed and not dry-run)
+                    (if (and (or (seq new-docs) metadata-changed?) (not dry-run))
+                      (do
+                        (when verbose (println "  Updating project overview..."))
+                        (error/bind (update-project-overview overview-file
+                                                             claude-project
+                                                             (:all-documents analysis)
+                                                             app-version
+                                                             parsed-overview
+                                                             processed-docs)
+                                    (fn [_]
+                                      (when verbose
+                                        (println (str "  Incremental update complete: "
+                                                      (count new-docs) " new documents, "
+                                                      "metadata changed: " metadata-changed?)))
 
-                      ;; Step 5: Update overview (if needed and not dry-run)
-                      (if (and (or (seq new-docs) metadata-changed?) (not dry-run))
-                        (do
-                          (when verbose (println "  Updating project overview..."))
-                          (error/bind (update-project-overview overview-file
-                                                               claude-project
-                                                               (:all-documents analysis)
-                                                               app-version
-                                                               parsed-overview
-                                                               processed-docs)
-                                      (fn [_]
-                                        (when verbose
-                                          (println (str "  Incremental update complete: "
-                                                        (count new-docs) " new documents, "
-                                                        "metadata changed: " metadata-changed?)))
+                                      (error/success {:new-documents-count (count new-docs)
+                                                      :processed-documents processed-docs
+                                                      :metadata-changed? metadata-changed?
+                                                      :dry-run? dry-run}))))
+                      (do
+                        (when verbose
+                          (println (str "  Incremental update complete: "
+                                        (count new-docs) " new documents, "
+                                        "metadata changed: " metadata-changed?)))
 
-                                        (error/success {:new-documents-count (count new-docs)
-                                                        :processed-documents processed-docs
-                                                        :metadata-changed? metadata-changed?
-                                                        :dry-run? dry-run}))))
-                        (do
-                          (when verbose
-                            (println (str "  Incremental update complete: "
-                                          (count new-docs) " new documents, "
-                                          "metadata changed: " metadata-changed?)))
-
-                          (error/success {:new-documents-count (count new-docs)
-                                          :processed-documents processed-docs
-                                          :metadata-changed? metadata-changed?
-                                          :dry-run? dry-run})))))))))
+                        (error/success {:new-documents-count (count new-docs)
+                                        :processed-documents processed-docs
+                                        :metadata-changed? metadata-changed?
+                                        :dry-run? dry-run}))))))))
