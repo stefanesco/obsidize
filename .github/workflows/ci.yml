@@ -83,7 +83,7 @@ jobs:
 
       # Babashka + clj-kondo on all OS
       - name: Setup Clojure tools (bb, clj-kondo)
-        uses: DeLaGuardo/setup-clojure@v13
+        uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: ${{ env.BABASHKA_VERSION }}
           clj-kondo: ${{ env.CLJ_KONDO_VERSION }}
