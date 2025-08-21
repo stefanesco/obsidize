@@ -25,7 +25,7 @@ env:
   CLOJURE_DOWNLOAD_URL: ${{ vars.CLOJURE_DOWNLOAD_URL || 'https://download.clojure.org/install' }}
 
   # Security Tool Configuration
-  TRIVY_GPG_KEY_ID: ${{ vars.TRIVY_GPG_KEY_ID || 'B5690EEEBB952194' }}
+  TRIVY_GPG_KEY_ID: ${{ vars.TRIVY_GPG_KEY_ID || 'E9D0A3616276FA6C' }}
   TRIVY_PUBLIC_KEY_URL: ${{ vars.TRIVY_PUBLIC_KEY_URL || 'https://aquasecurity.github.io/trivy-repo/deb/public.key' }}
 
   # Windows Package Manager Configuration
