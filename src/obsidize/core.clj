@@ -167,6 +167,10 @@
   (println "Copyright © 2025 Tudor Stefanescu")
   (println "For more help, license information visit: https://github.com/stefanesco/obsidize"))
 
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Command Handlers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn run
   "Main execution function that processes Claude data packs with incremental updates."
   [options]
@@ -255,90 +259,156 @@
           (when-let [tmp (:data-dir data-pack-result)]
             (data-pack/cleanup-temp-directory tmp)))))))
 
+(defn handle-version
+  "Handle --version command."
+  [_options]
+  (println (str "obsidize " app-version))
+  (shutdown-agents)
+  (exit 0))
+
+(defn handle-diagnostics
+  "Handle --diagnostics command."
+  [_options]
+  (log/comprehensive-diagnostics)
+  (shutdown-agents)
+  (exit 0))
+
+(defn handle-help
+  "Handle --help command."
+  [summary _options]
+  (print-help summary)
+  (shutdown-agents)
+  (exit 0))
+
+(defn handle-empty-args
+  "Handle case when no arguments are provided."
+  [summary _options]
+  (print-help summary)
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-verbose-only
+  "Handle case when only --verbose flag is provided."
+  [summary _options]
+  (print-help summary)
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-parsing-errors
+  "Handle CLI parsing errors."
+  [errors _options]
+  (println "❌ Error parsing arguments:")
+  (println (str/join "\n" errors))
+  (println "\nUse --help for usage information.")
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-unexpected-args
+  "Handle unexpected positional arguments."
+  [arguments _options]
+  (println "❌ Unexpected arguments:" (pr-str arguments))
+  (println "\nUse --help for usage information.")
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-mutually-exclusive-flags
+  "Handle mutually exclusive flags."
+  [_options]
+  (println "❌ Options --incremental and --force-full are mutually exclusive.")
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-missing-input
+  "Handle missing required --input option."
+  [_options]
+  (println "❌ Missing required option: --input ARCHIVE/DIR")
+  (println "\nUse --help for usage information.")
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-input-not-exists
+  "Handle case when input file does not exist."
+  [input _options]
+  (println "❌ Input path does not exist:" input)
+  (println "\nUse --help for usage information.")
+  (shutdown-agents)
+  (exit 1))
+
+(defn handle-normal-execution
+  "Handle normal application execution."
+  [options]
+  ;; Configure logging based on options
+  (when (:debug options)
+    (log/set-debug! true))
+  (when (or (:verbose options) (:debug options))
+    (log/set-verbose! true))
+
+  ;; Log runtime info if debug is enabled
+  (when (:debug options)
+    (log/log-runtime-info))
+
+  (run options)
+  (shutdown-agents))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Command Dispatch System
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn dispatch-command
+  "Dispatch to appropriate command handler based on options."
+  [options summary]
+  (cond
+    (:version options) (handle-version options)
+    (:diagnostics options) (handle-diagnostics options)
+    (:help options) (handle-help summary options)
+    :else (throw (ex-info "Unknown command dispatch" {:options options}))))
+
+(defn validate-arguments
+  "Validate parsed CLI arguments and handle errors."
+  [options errors summary arguments args]
+  (cond
+    ;; Handle parsing errors
+    (seq errors) (handle-parsing-errors errors options)
+
+    ;; Unexpected positional arguments
+    (seq arguments) (handle-unexpected-args arguments options)
+
+    ;; Show help when no arguments provided
+    (and (empty? args) (not (:help options))) (handle-empty-args summary options)
+
+    ;; Show help when only --verbose flag is provided
+    (only-verbose-provided? args) (handle-verbose-only summary options)
+
+    ;; Mutually exclusive flags
+    (and (:incremental options) (:force-full options)) (handle-mutually-exclusive-flags options)
+
+    ;; Ensure input is provided
+    (nil? (:input options)) (handle-missing-input options)
+
+    ;; Validate input file exists
+    (not (.exists (io/file (:input options)))) (handle-input-not-exists (:input options) options)
+
+    ;; All validations pass
+    :else :valid))
+
+(defn run-application
+  "Run the main application logic."
+  [options]
+  (handle-normal-execution options))
+
 (defn -main
   [& args]
   (let [{:keys [options errors summary arguments]} (cli/parse-opts args cli-options)]
     (cond
-      ;; Show version when explicitly requested
-      (:version options)
-      (do (println (str "obsidize " app-version))
-          (shutdown-agents)
-          (exit 0))
+      ;; Handle dispatch commands first
+      (some options [:version :diagnostics :help])
+      (dispatch-command options summary)
 
-      ;; Run diagnostics when explicitly requested
-      (:diagnostics options)
-      (do (log/comprehensive-diagnostics)
-          (shutdown-agents)
-          (exit 0))
-
-      ;; Show help when explicitly requested
-      (:help options)
-      (do (print-help summary)
-          (shutdown-agents)
-          (exit 0))
-
-      ;; Show help when no arguments provided and return 1
-      (and (empty? args) (not (:help options)))
-      (do (print-help summary)
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Show help when only --verbose flag is provided and return 1
-      (only-verbose-provided? args)
-      (do (print-help summary)
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Handle parsing errors
-      (seq errors)
-      (do (println "❌ Error parsing arguments:")
-          (println (str/join "\n" errors))
-          (println "\nUse --help for usage information.")
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Unexpected positional arguments
-      (seq arguments)
-      (do (println "❌ Unexpected arguments:" (pr-str arguments))
-          (println "\nUse --help for usage information.")
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Mutually exclusive flags
-      (and (:incremental options) (:force-full options))
-      (do (println "❌ Options --incremental and --force-full are mutually exclusive.")
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Ensure input is provided unless we're in non-run modes
-      (nil? (:input options))
-      (do (println "❌ Missing required option: --input ARCHIVE/DIR")
-          (println "\nUse --help for usage information.")
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Validate input file exists
-      (not (.exists (io/file (:input options))))
-      (do (println "❌ Input path does not exist:" (:input options))
-          (println "\nUse --help for usage information.")
-          (shutdown-agents)
-          (exit 1))
-
-      ;; Normal execution
+      ;; Validate arguments and run application
       :else
-      (do
-        ;; Configure logging based on options
-        (when (:debug options)
-          (log/set-debug! true))
-        (when (or (:verbose options) (:debug options))
-          (log/set-verbose! true))
-
-        ;; Log runtime info if debug is enabled
-        (when (:debug options)
-          (log/log-runtime-info))
-
-        (run options)
-        (shutdown-agents)))))
+      (let [validation-result (validate-arguments options errors summary arguments args)]
+        (when (= validation-result :valid)
+          (run-application options))))))
 
 ;; Execute the main function if the script is run directly
 (when (= *file* (System/getProperty "babashka.file"))

@@ -30,35 +30,40 @@
       (finally
         (cleanup-test-env)))))
 
-(deftest determine-new-messages-test
+(deftest calculate-conversation-updates-test
   (testing "Identify new messages based on obsidized_at timestamp"
     (let [existing-content "---\nuuid: conv-123\ncreated_at: 2025-08-04T10:30:00Z\nupdated_at: 2025-08-04T15:45:00Z\nobsidized_at: 2025-08-05T09:15:00Z\ntype: conversation\n---\n\n# Test Conversation\n\n**2025-08-04T10:30:00Z Me:** Hello\n\n**Claude:** Hi there!"
 
           conversation {:uuid "conv-123"
+                        :updated_at "2025-08-05T15:45:00Z"
                         :chats [{:q "Hello" :a "Hi there!" :create_time "2025-08-04T10:30:00Z"} ; Old message
                                 {:q "How are you?" :a "I'm good!" :create_time "2025-08-05T10:30:00Z"} ; New message (after obsidized_at)
                                 {:q "What's new?" :a "Not much" :create_time "2025-08-05T11:00:00Z"}]} ; Another new message
 
-          result (conv/determine-new-messages conversation existing-content)]
+          result (conv/calculate-conversation-updates conversation existing-content)]
 
-      (is result)
+      (is (:needs-update? result))
       (is (= 2 (count (:new-messages result))))
       (is (str/includes? (:messages-md result) "How are you?"))
-      (is (str/includes? (:messages-md result) "What's new?"))))
+      (is (str/includes? (:messages-md result) "What's new?"))
+      (is (= "2025-08-05T15:45:00Z" (get-in result [:updated-frontmatter :updated_at])))))
 
-  (testing "Return nil when no new messages"
+  (testing "Return no updates when no new messages"
     (let [existing-content "---\nuuid: conv-123\nobsidized_at: 2025-08-05T12:00:00Z\ntype: conversation\n---\n\n# Test"
           conversation {:uuid "conv-123"
+                        :updated_at "2025-08-05T15:45:00Z"
                         :chats [{:q "Hello" :a "Hi!" :create_time "2025-08-05T10:30:00Z"}]} ; Before obsidized_at
-          result (conv/determine-new-messages conversation existing-content)]
-      (is (nil? result))))
+          result (conv/calculate-conversation-updates conversation existing-content)]
+      (is (not (:needs-update? result)))))
 
   (testing "Handle missing obsidized_at (corrupted frontmatter)"
     (let [existing-content "---\nuuid: conv-123\ntype: conversation\n---\n\n# Test" ; No obsidized_at
           conversation {:uuid "conv-123"
+                        :updated_at "2025-08-05T15:45:00Z"
                         :chats [{:q "Hello" :a "Hi!" :create_time "2025-08-05T10:30:00Z"}]}
-          result (conv/determine-new-messages conversation existing-content)]
-      (is (nil? result)))))
+          result (conv/calculate-conversation-updates conversation existing-content)]
+      (is (:regenerate? result))
+      (is (not (:needs-update? result))))))
 
 (deftest process-conversation-incremental-test
   (testing "Create new conversation file"

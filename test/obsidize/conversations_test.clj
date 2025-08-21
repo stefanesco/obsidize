@@ -64,18 +64,20 @@
         (is (str/includes? (:content res) "[Missing question]"))
         (is (str/includes? (:content res) "[Missing answer]"))))))
 
-(deftest determine-new-messages-detection
+(deftest calculate-conversation-updates-detection
   (testing "detects messages after obsidized_at"
     (with-redefs [;; Simulate frontmatter with obsidized_at at 10:00
                   obsidize.vault-scanner/extract-frontmatter (fn [_] {:frontmatter "obsidized_at: 2023-01-01T10:00:00Z"})
                   obsidize.vault-scanner/parse-simple-yaml (fn [_] {:obsidized_at "2023-01-01T10:00:00Z"})
                   obsidize.vault-scanner/parse-timestamp (fn [s] (java.time.Instant/parse s))
                   ;; message formatting stable
-                  utils/format-timestamp identity]
-      (let [conv {:chats [{:q "before" :a "a" :create_time "2023-01-01T09:00:00Z"}
+                  utils/format-timestamp identity
+                  utils/current-timestamp (fn [] "2023-01-01T11:00:00Z")]
+      (let [conv {:updated_at "2023-01-01T10:30:00Z"
+                  :chats [{:q "before" :a "a" :create_time "2023-01-01T09:00:00Z"}
                           {:q "after" :a "b" :create_time "2023-01-01T10:00:01Z"}]}
-            res (sut/determine-new-messages conv "---")]
-        (is (map? res))
+            res (sut/calculate-conversation-updates conv "---")]
+        (is (:needs-update? res))
         (is (= 1 (count (:new-messages res))))
         (is (str/includes? (:messages-md res) "after"))))))
 
@@ -110,7 +112,11 @@
                     obsidize.vault-scanner/parse-simple-yaml (fn [_] {:obsidized_at "2020-01-01T00:00:00Z"})
                     obsidize.vault-scanner/parse-timestamp (fn [s] (java.time.Instant/parse s))
                     ;; force new messages
-                    sut/determine-new-messages (fn [_ _] {:new-messages [{}] :messages-md "MSG"})
+                    sut/calculate-conversation-updates (fn [conv _] {:needs-update? true
+                                                                     :new-messages [{}]
+                                                                     :messages-md "MSG"
+                                                                     :updated-frontmatter {:updated_at (:updated_at conv)
+                                                                                           :obsidized_at fixed-now}})
                     spit (fn [_ content] (reset! spit-content content))]
         (sut/process-conversation {:uuid "u" :updated_at "2025-02-02T00:00:00Z"} "out" "1.0.0" {})
         (let [c @spit-content]
@@ -125,7 +131,7 @@
                               (proxy [java.io.File] [p]
                                 (exists [] true)))
                     slurp (fn [_] "content")
-                    sut/determine-new-messages (fn [_ _] nil)
+                    sut/calculate-conversation-updates (fn [_ _] {:needs-update? false})
                     spit (fn [& _] (swap! spit-called inc))]
         (sut/process-conversation {:uuid "u"} "out" "1.0.0" {})
         (is (zero? @spit-called))))))

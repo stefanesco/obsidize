@@ -101,18 +101,20 @@
                 (str timestamp "::" (str/trim question))))
          (set))))
 
-(defn determine-new-messages
-  "Given full conversation and existing file content, returns:
-   {:new-messages [...], :messages-md \"...\"} when there are new messages after
-   the file's :obsidized_at timestamp and not already present in the file.
-   Respects user deletions by not re-adding deleted messages."
-  [conversation existing-note-content]
-  (let [parsed (vault-scanner/extract-frontmatter existing-note-content)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Pure Logic Functions (Phase 3.1)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn calculate-conversation-updates
+  "Pure function: determines what updates are needed for a conversation.
+   Returns map with update information including new messages and frontmatter."
+  [conversation existing-content]
+  (let [parsed (vault-scanner/extract-frontmatter existing-content)
         frontmatter (vault-scanner/parse-simple-yaml (:frontmatter parsed))
         obsidized-at-str (:obsidized_at frontmatter)
         obsidized-at (vault-scanner/parse-timestamp obsidized-at-str)]
     (if obsidized-at
-      (let [existing-signatures (extract-existing-message-signatures existing-note-content)
+      (let [existing-signatures (extract-existing-message-signatures existing-content)
             new-messages (->> (:chats conversation)
                               (filter (fn [{:keys [create_time q]}]
                                         (when (and create_time q)
@@ -120,55 +122,95 @@
                                                 signature (str create_time "::" (str/trim q))]
                                             (and msg-time
                                                  (.isAfter msg-time obsidized-at)
-                                                 ;; ENHANCED: Only include if not already present (respects user deletions)
                                                  (not (contains? existing-signatures signature)))))))
-                              (sort-by :create_time))]
-        (when (seq new-messages)
-          {:new-messages new-messages
-           :messages-md (->> new-messages
+                              (sort-by :create_time))
+            new-obsidized-at (utils/current-timestamp)
+            ;; FIXED: Include the actual conversation data in updated frontmatter
+            updated-frontmatter (merge
+                                 (when (:updated_at conversation)
+                                   {:updated_at (:updated_at conversation)})
+                                 {:obsidized_at new-obsidized-at})]
+        {:needs-update? (seq new-messages)
+         :new-messages new-messages
+         :updated-frontmatter updated-frontmatter
+         :messages-md (when (seq new-messages)
+                        (->> new-messages
                              (map (fn [{:keys [q a create_time]}]
                                     (templates/format-conversation-message
                                      (format-message-timestamp create_time)
                                      (or q templates/missing-question-placeholder)
                                      (or a templates/missing-answer-placeholder))))
-                             (str/join "\n"))}))
+                             (str/join "\n")))})
       ;; If no obsidized_at found, treat as corrupted and regenerate completely
-      nil)))
+      {:needs-update? false
+       :regenerate? true
+       :new-messages []
+       :updated-frontmatter {}
+       :messages-md nil})))
+
+(defn generate-conversation-markdown
+  "Pure function: generates complete markdown content for a conversation."
+  [conversation app-version options]
+  (generate-markdown-for-new-note conversation app-version options))
+
+(defn apply-frontmatter-updates
+  "Pure function: applies frontmatter updates to existing content."
+  [existing-content updated-frontmatter]
+  (reduce (fn [content [key value]]
+            (str/replace content
+                         (re-pattern (str (name key) ": .*"))
+                         (str (name key) ": " value)))
+          existing-content
+          updated-frontmatter))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Impure I/O
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn write-conversation-updates!
+  "I/O function: handles file operations for conversation updates."
+  [output-path updates existing-content]
+  (when (:needs-update? updates)
+    (println (str "📝 Appending " (count (:new-messages updates)) " new messages"))
+    (let [updated-content (apply-frontmatter-updates existing-content (:updated-frontmatter updates))
+          final-content (str updated-content "\n\n" (:messages-md updates))]
+      (spit output-path final-content))))
+
+(defn write-new-conversation!
+  "I/O function: creates a new conversation file."
+  [output-path conversation-data]
+  (println (str "✨ Creating new conversation: " (:filename conversation-data)))
+  (spit output-path (:content conversation-data)))
+
+(defn read-existing-conversation
+  "I/O function: reads existing conversation file if it exists."
+  [output-path]
+  (let [output-file (io/file output-path)]
+    (when (.exists output-file)
+      (slurp output-file))))
 
 (defn process-conversation
   "Creates or updates a conversation note on disk.
    Signature aligned with core: (conversation output-dir app-version options).
    NOTE: caller (core) is responsible for honoring --dry-run."
   [conversation output-dir app-version options]
-  (let [generated-note (generate-markdown-for-new-note conversation app-version options)
+  (let [generated-note (generate-conversation-markdown conversation app-version options)
         output-path (str output-dir "/" (:filename generated-note))
-        output-file (io/file output-path)]
-    (if (.exists output-file)
-      ;; Try incremental update
-      (let [existing-content (slurp output-file)
-            update-data (determine-new-messages conversation existing-content)]
-        (if update-data
-          (let [new-obsidized-at (utils/current-timestamp)
-                ;; Update both updated_at and obsidized_at in frontmatter (simple line replacements)
-                updated-content (-> existing-content
-                                    (str/replace
-                                     (re-pattern "updated_at: .*")
-                                     (str "updated_at: " (:updated_at conversation)))
-                                    (str/replace
-                                     (re-pattern "obsidized_at: .*")
-                                     (str "obsidized_at: " new-obsidized-at)))]
-            (println (str "📝 Appending " (count (:new-messages update-data))
-                          " new messages to: " (:filename generated-note)))
-            (spit output-path (str updated-content "\n\n" (:messages-md update-data))))
+        existing-content (read-existing-conversation output-path)]
+    (if existing-content
+      ;; Handle existing conversation with pure logic
+      (let [updates (calculate-conversation-updates conversation existing-content)]
+        (cond
+          (:regenerate? updates)
+          (write-new-conversation! output-path generated-note)
+
+          (:needs-update? updates)
+          (write-conversation-updates! output-path updates existing-content)
+
+          :else
           (println (str "⏭️  No new messages for: " (:filename generated-note)))))
-      ;; Create new
-      (do
-        (println (str "✨ Creating new conversation: " (:filename generated-note)))
-        (spit output-path (:content generated-note))))))
+      ;; Create new conversation
+      (write-new-conversation! output-path generated-note))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Minimal -main (kept for manual/debug usage)
