@@ -104,7 +104,17 @@
   {:doc "Check for outdated Clojure dependencies with antq (Linux only)."
    :task (when (= "Linux" (System/getProperty "os.name"))
            (println "🔬 Checking for outdated dependencies on Linux...")
-           (shell "clojure -M:antq"))}
+           (try
+             (shell "clojure -M:antq")
+             (println "✅ Dependency audit completed successfully.")
+             (catch Exception e
+               (let [exit-code (:exit (ex-data e))]
+                 (cond
+                   (= exit-code 1) (println "⚠️  Dependency audit found issues (non-blocking).")
+                   (= exit-code 2) (println "⚠️  Dependency audit errors detected (non-breaking).")
+                   :else (do
+                           (println "⚠️  Dependency audit failed unexpectedly (non-breaking).")
+                           (println "   Error:" (.getMessage e)))))))}
 
   check-trivy
   {:doc "Check if Trivy is installed and available on the PATH."

@@ -99,10 +99,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@${{ env.CHECKOUT_ACTION_VERSION }}
+        uses: actions/checkout@v5
 
       - name: Cache Clojure dependencies
-        uses: actions/cache@${{ env.CACHE_ACTION_VERSION }}
+        uses: actions/cache@v4
         with:
           path: |
             ~/.m2/repository
@@ -117,7 +117,7 @@ jobs:
         run: echo "key=$(date -u +'%Y-W%V')" >> "$GITHUB_OUTPUT"
 
       - name: Cache Trivy DB
-        uses: actions/cache@${{ env.CACHE_ACTION_VERSION }}
+        uses: actions/cache@v4
         with:
           path: ~/.cache/trivy
           key: ${{ runner.os }}-trivy-${{ steps.weekly-key.outputs.key }}
@@ -125,17 +125,17 @@ jobs:
             ${{ runner.os }}-trivy-
 
       - name: Set up GraalVM (for native-image and jlink tools)
-        uses: graalvm/setup-graalvm@${{ env.SETUP_GRAALVM_ACTION_VERSION }}
+        uses: graalvm/setup-graalvm@v1
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Clojure tools
-        uses: DeLaGuardo/setup-clojure@${{ env.SETUP_CLOJURE_ACTION_VERSION }}
+        uses: DeLaGuardo/setup-clojure@13.4
         with:
-          bb: ${{ env.BABASHKA_VERSION }}
-          clj-kondo: ${{ env.CLJ_KONDO_VERSION }}
+          bb: latest
+          clj-kondo: latest
 
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
@@ -150,7 +150,7 @@ jobs:
         run: |
           ./.github/scripts/install-clojure-windows.ps1
           # Ensure PATH is updated for subsequent steps
-          echo "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "C:\ProgramData\chocolatey\lib\clojure\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
           echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Install Trivy (Linux)
@@ -183,7 +183,7 @@ jobs:
         run: ./.github/scripts/prepare-release-artifacts.ps1 "${{ matrix.platform_id }}" "${{ matrix.os_id }}"
 
       - name: Upload comprehensive platform artifact
-        uses: actions/upload-artifact@${{ env.UPLOAD_ARTIFACT_ACTION_VERSION }}
+        uses: actions/upload-artifact@v4
         with:
           name: platform-${{ matrix.os_id }}-${{ matrix.arch }}
           path: |
@@ -219,17 +219,17 @@ jobs:
       - build-release
     steps:
       - name: Checkout code
-        uses: actions/checkout@${{ env.CHECKOUT_ACTION_VERSION }}
+        uses: actions/checkout@v5
 
       - name: Download artifacts for validation
-        uses: actions/download-artifact@${{ env.DOWNLOAD_ARTIFACT_ACTION_VERSION }}
+        uses: actions/download-artifact@v4
         with:
           pattern: 'platform-${{ matrix.os_id }}-${{ matrix.arch }}'
           merge-multiple: true
           path: validation-artifacts
 
       - name: Cache Clojure dependencies
-        uses: actions/cache@${{ env.CACHE_ACTION_VERSION }}
+        uses: actions/cache@v4
         with:
           path: |
             ~/.m2/repository
@@ -240,17 +240,17 @@ jobs:
             ${{ runner.os }}-clojure-
 
       - name: Set up GraalVM
-        uses: graalvm/setup-graalvm@${{ env.SETUP_GRAALVM_ACTION_VERSION }}
+        uses: graalvm/setup-graalvm@v1
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Clojure tools
-        uses: DeLaGuardo/setup-clojure@${{ env.SETUP_CLOJURE_ACTION_VERSION }}
+        uses: DeLaGuardo/setup-clojure@13.4
         with:
-          bb: ${{ env.BABASHKA_VERSION }}
-          clj-kondo: ${{ env.CLJ_KONDO_VERSION }}
+          bb: latest
+          clj-kondo: latest
 
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
@@ -265,7 +265,7 @@ jobs:
         run: |
           ./.github/scripts/install-clojure-windows.ps1
           # Ensure PATH is updated for subsequent steps
-          echo "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "C:\ProgramData\chocolatey\lib\clojure\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
           echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Prepare downloaded artifacts for testing (Unix)
@@ -292,7 +292,7 @@ jobs:
       - validate-packages
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@${{ env.DOWNLOAD_ARTIFACT_ACTION_VERSION }}
+        uses: actions/download-artifact@v4
         with:
           pattern: 'platform-*'
           merge-multiple: true
@@ -302,7 +302,7 @@ jobs:
 
       - name: Create GitHub Release
         if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
-        uses: softprops/action-gh-release@${{ env.GH_RELEASE_ACTION_VERSION }}
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             # comprehensive platform tarballs (include standalone JAR, jlink, and native where available)
@@ -320,7 +320,7 @@ jobs:
     if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
     steps:
       - name: Download platform artifacts for Homebrew
-        uses: actions/download-artifact@${{ env.DOWNLOAD_ARTIFACT_ACTION_VERSION }}
+        uses: actions/download-artifact@v4
         with:
           pattern: 'platform-*'
           merge-multiple: true

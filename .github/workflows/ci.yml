@@ -76,7 +76,7 @@ jobs:
             ${{ runner.os }}-trivy-
 
       - name: Set up Java ${{ env.JAVA_VERSION }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
@@ -85,8 +85,8 @@ jobs:
       - name: Setup Clojure tools (bb, clj-kondo)
         uses: DeLaGuardo/setup-clojure@13.4
         with:
-          bb: ${{ env.BABASHKA_VERSION }}
-          clj-kondo: ${{ env.CLJ_KONDO_VERSION }}
+          bb: latest
+          clj-kondo: latest
 
       # Clojure CLI per-OS
       - name: Install Clojure CLI (Linux)
@@ -102,7 +102,7 @@ jobs:
         run: |
           ./.github/scripts/install-clojure-windows.ps1
           # Ensure PATH is updated for subsequent steps
-          echo "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "C:\ProgramData\chocolatey\lib\clojure\tools" | Out-File -FilePath $env:GITHUB_PATH -Append
           echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       # Trivy only on Linux
