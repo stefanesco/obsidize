@@ -6,10 +6,10 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Clojure](https://img.shields.io/badge/Clojure-1.12.1-green.svg)](https://clojure.org)
 
-Obsidize is a tool that aims to make it easy to import and maintain in Obsidian conversation history and project data exported from LLMs - starting with Claude, converting the raw json files that Anthropic provides into a structured folder with proper linking and metadata, and implementing an update process that only process what's actually changed.
+Obsidize is a tool that aims to make it easy to import and maintain the conversation history exported from Claude in Obsidian - it converts the raw json files that Anthropic provides into a structured folder with proper linking and metadata, and implements an update process that keeps any local edits and adds only the new conversations.
 
 > Disclaimer:
-> While I followed software engineering best practices in developing and packaging this application it remains a personal project and may not cover all edge cases.
+> While I aimed to implement 'obsidize' using software engineering best practices it remains a personal project.
 >
 > The code, documentation and binaries are provided in the hope of being useful but without any warranty.
 >
@@ -31,6 +31,7 @@ Obsidize is a tool that aims to make it easy to import and maintain in Obsidian 
 ## &#128190; Obsidize Package
 
 Obsidize is available for macOS, Linux and Windows:
+
 - on macOS: Homebrew support (based on native-image built with GraalVM - fast, native performance), self-contained binary (built with jlink - JRE+jar) and stand-alone jar
 - on Linux: Homebrew support (based on the self-contained binary built with jlink - JRE+jar) and stand-alone jar
 - on Windows: self-contained binary (built with jlink - JRE+jar) and stand-alone jar
@@ -113,6 +114,7 @@ obsidize --input new-export.dms --output-dir my-obsidian-vault --dry-run
 ```
 
 ### Full Re-Import
+Use this if you inadvertently deleted imported data but be aware that you will lose any local edits in the conversation notes.
 ```bash
 obsidize --input export.dms --output-dir my-obsidian-vault --force-full
 ```
@@ -122,10 +124,11 @@ Add custom tags/links:
 obsidize --input export.dms --output-dir my-obsidian-vault --tags ai,claude --links "[[AI Tools]]","[[Notes]]"
 ```
 
-For full options, run `obsidize --help` (see below for details).
+For the list of full options, run `obsidize --help` (see below for details).
 
 **Tips**:
-- Backup your Obsidian vault before running.
+
+- For increased safety: backup your Obsidian vault before running, or use a temporary folder as output and move the created files in your vault manually.
 - Use `--verbose` for detailed output.
 - Output structure: Conversations as individual .md files; projects as folders with overviews and documents.
 
@@ -133,10 +136,14 @@ For full options, run `obsidize --help` (see below for details).
 
 ### Prerequisites
 
-#### To use (macOS/Linux):
-- [Homebrew](https://brew.sh/) package manager
+#### To use
 
-#### To build:
+- all releases contain a selfcontained executable and also the standalone jar.
+
+#### To build
+
+- Java
+- Native image: GraalVM
 - [Clojure CLI](https://clojure.org/guides/install_clojure)
 - [Babashka](https://babashka.org/) (optional, for development tasks)
 
@@ -1159,6 +1166,7 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 ### Configuration Variables
 
 #### Platform and Runtime Configuration
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `JAVA_VERSION` | `21` | Java version for builds |
@@ -1167,6 +1175,7 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 | `CLJ_KONDO_VERSION` | `latest` | clj-kondo linter version |
 
 #### GitHub Actions Versions
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `CHECKOUT_ACTION_VERSION` | `v5` | actions/checkout version |
@@ -1179,6 +1188,7 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 | `GH_RELEASE_ACTION_VERSION` | `v2` | softprops/action-gh-release version (Release only) |
 
 #### Security and Tool Configuration
+
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `CLOJURE_CLI_VERSION` | `1.12.1.1550` | Clojure CLI version to install |
@@ -1187,34 +1197,6 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 | `TRIVY_GPG_KEY_ID` | `E9D0A3616276FA6C` | GPG Key ID for Trivy validation |
 | `TRIVY_PUBLIC_KEY_URL` | `https://aquasecurity.github.io/trivy-repo/deb/public.key` | URL for Trivy public key |
 | `CHOCOLATEY_CLOJURE_VERSION` | `1.12.1.1550` | Clojure version for Windows Chocolatey install |
-
-### Setting Custom Values
-
-#### For Organization Owners
-1. Go to **Organization Settings** → **Variables** → **Actions**
-2. Add new variables using the names from the table above
-3. These will apply to all repositories in the organization
-
-#### For Repository Maintainers
-1. Go to **Repository Settings** → **Secrets and Variables** → **Actions** → **Variables** tab
-2. Click **New repository variable**
-3. Enter the variable name and custom value
-4. Repository variables override organization variables
-
-#### Example: Using Different Java Version
-```
-Variable name: JAVA_VERSION
-Variable value: 17
-```
-
-#### Example: Pinning Action Versions for Security
-```
-Variable name: CHECKOUT_ACTION_VERSION
-Variable value: v4.1.7
-
-Variable name: CACHE_ACTION_VERSION  
-Variable value: v3.3.3
-```
 
 ### Configuration Benefits
 
@@ -1234,7 +1216,7 @@ Variable value: v3.3.3
 
 ### Fallback Behavior
 
-All variables have sensible defaults, so workflows will continue to work even if no custom variables are configured. The syntax `${{ vars.VARIABLE_NAME || 'default-value' }}` ensures robust fallback behavior.
+All variables (except input path) have sensible defaults, so workflows will continue to work even if no custom variables are configured. The syntax `${{ vars.VARIABLE_NAME || 'default-value' }}` ensures robust fallback behavior.
 
 ## 📝 <a name="license"></a>License
 
