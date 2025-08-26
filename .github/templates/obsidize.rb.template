@@ -25,29 +25,25 @@ class Obsidize < Formula
   {{/LINUX_ENABLED}}
 
   def install
-    # Install all contents to libexec
-    libexec.install Dir["*"]
-
-    # Create wrapper scripts in bin/
-    # On macOS: prefer native-image, fallback to jlink
-    # On Linux: use jlink binary
     if OS.mac?
-      if (libexec/"bin/obsidize-native").exist?
-        # Use native binary on macOS for best performance
-        bin.write "obsidize", <<~EOS
-          #!/bin/bash
-          exec "#{libexec}/bin/obsidize-native" "$@"
-        EOS
-      elsif (libexec/"bin/obsidize").exist?
-        # Fallback to jlink binary
-        bin.install_symlink libexec/"bin/obsidize"
+      # macOS: Native executable package (direct binary)
+      if (buildpath/"bin/obsidize").exist?
+        # Install native binary directly
+        bin.install "bin/obsidize"
       else
-        odie "No executable found in macOS package"
+        odie "No native executable found in macOS package"
       end
     else
-      # Linux: use jlink binary (more reliable than native)
+      # Linux: JLink runtime package (includes JRE + application)
+      libexec.install Dir["*"]
+      
       if (libexec/"bin/obsidize").exist?
-        bin.install_symlink libexec/"bin/obsidize"
+        # Create wrapper for JLink package
+        bin.write "obsidize", <<~EOS
+          #!/bin/bash
+          exec "#{libexec}/bin/obsidize" "$@"
+        EOS
+        chmod 0755, bin/"obsidize"
       else
         odie "No jlink executable found in Linux package"
       end

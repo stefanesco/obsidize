@@ -18,12 +18,17 @@ echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
 echo "Artifacts tree:"
 ls -R artifacts || true
 
-ARM_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
-AMD_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
+# macOS: Look for native executable packages
+ARM_TGZ="$(find artifacts -type f -name "obsidize-native-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
+AMD_TGZ="$(find artifacts -type f -name "obsidize-native-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
 
 if [[ -z "$ARM_TGZ" || -z "$AMD_TGZ" ]]; then
-  echo "Missing macOS jlink tarballs. Found:"
+  echo "❌ Missing macOS native executable packages. Found:"
   find artifacts -type f -name "obsidize-*.tar.gz" -maxdepth 2 -print
+  echo ""
+  echo "Expected files:"
+  echo "  - obsidize-native-${VERSION}-macos-aarch64.tar.gz"
+  echo "  - obsidize-native-${VERSION}-macos-x64.tar.gz"
   exit 1
 fi
 
@@ -35,9 +40,13 @@ echo "AMD64_SHA=$AMD_SHA" >> "$GITHUB_ENV"
 echo "ARM64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$ARM_TGZ")" >> "$GITHUB_ENV"
 echo "AMD64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$AMD_TGZ")" >> "$GITHUB_ENV"
 
+# Linux: Look for JLink runtime packages  
 LINUX_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-linux-*.tar.gz" -print -quit || true)"
 if [[ -n "$LINUX_TGZ" ]]; then
   LINUX_SHA="$(shasum -a 256 "$LINUX_TGZ" | awk '{print $1}')"
   echo "LINUX_SHA=$LINUX_SHA" >> "$GITHUB_ENV"
   echo "LINUX_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$LINUX_TGZ")" >> "$GITHUB_ENV"
+  echo "✅ Found Linux JLink package: $(basename "$LINUX_TGZ")"
+else
+  echo "⚠️  No Linux JLink package found"
 fi

@@ -28,18 +28,32 @@ Obsidize is a tool that aims to make it easy to import and maintain the conversa
 - **🔍 Dry Run Mode**: Allows to preview changes before applying them
 - **📊 Progress Reporting**: Clear feedback on what's being processed and updated
 
-## &#128190; Obsidize Package
+## &#128190; Obsidize Package Distribution
+
+### 📦 **Packaging Strategy**
+
+Obsidize uses an **optimized packaging strategy** that provides the best installation method for each platform:
+
+1. **📄 Universal JAR**: Works on any platform with Java 21+ 
+2. **🍺 Platform-Optimized Homebrew Packages**:
+   - **macOS**: Native executable (GraalVM) - fastest startup, no Java required
+   - **Linux**: JLink runtime bundle - includes optimized JRE, reliable cross-distro support
 
 ### ✅ **Supported Platforms**
 
-- **macOS**: Homebrew support (native binary via GraalVM - fast startup), JLink runtime bundle (JRE+jar), and standalone JAR
-- **Linux**: Homebrew support (JLink runtime bundle), and standalone JAR
+- **macOS (Intel/Apple Silicon)**: 
+  - 🥇 **Homebrew** (native executable - recommended)
+  - 📄 Universal JAR
+- **Linux (x86_64)**:
+  - 🥇 **Homebrew** (JLink runtime - recommended) 
+  - 📄 Universal JAR
+- **All Java Platforms**:
+  - 📄 **Universal JAR** (requires Java 21+)
 
-### ⚠️ **Platform Status**
+### ⚠️ **Development Status**
 
-- **Windows**: ❌ **Currently not working** - Windows support is in development
+- **Windows**: Universal JAR available, optimized packaging in development
   - Build system integration is incomplete  
-  - Clojure CLI installation issues prevent Windows builds
   - Tracked in [Windows Support Roadmap](#-windows-support-roadmap)
 
 ## 🚀 Quick Install
@@ -59,23 +73,38 @@ brew upgrade obsidize
 
 ### Manual Download (macOS/Linux)
 
-From the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest) download the package for your platform:
-- **macOS**: `obsidize-<version>-macos-aarch64.tar.gz` (Apple Silicon) or `obsidize-<version>-macos-x64.tar.gz` (Intel)
-- **Linux**: `obsidize-<version>-linux-amd64.tar.gz`
+From the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest):
 
-Extract and add to your PATH:
-
+**📄 Universal JAR (All Platforms)**
 ```bash
-tar -xzf obsidize-<version>-<platform>.tar.gz
-# The archive contains a complete runtime - no Java installation required
-./obsidize-<version>-<platform>/bin/obsidize --help
-
-# Optional: Add to PATH for system-wide access
-sudo cp -r obsidize-<version>-<platform> /usr/local/
-sudo ln -sf /usr/local/obsidize-<version>-<platform>/bin/obsidize /usr/local/bin/obsidize
+# Download obsidize-standalone.jar
+# Requires Java 21+ installed
+java -jar obsidize-standalone.jar --help
 ```
 
-**Note**: ⚠️ Windows packages are not currently available due to build system issues.
+**🍺 Platform-Optimized Packages**
+
+**macOS** - Native executable:
+```bash
+# Download: obsidize-native-<version>-macos-aarch64.tar.gz (Apple Silicon)
+#       or: obsidize-native-<version>-macos-x64.tar.gz (Intel)
+tar -xzf obsidize-native-<version>-macos-*.tar.gz
+./obsidize-native-<version>-macos-*/bin/obsidize --help
+
+# Add to PATH
+sudo cp obsidize-native-<version>-macos-*/bin/obsidize /usr/local/bin/
+```
+
+**Linux** - JLink runtime (includes JRE):
+```bash
+# Download: obsidize-<version>-linux-amd64.tar.gz
+tar -xzf obsidize-<version>-linux-amd64.tar.gz
+./obsidize-<version>-linux-amd64/bin/obsidize --help
+
+# Add to PATH  
+sudo cp -r obsidize-<version>-linux-amd64 /usr/local/
+sudo ln -sf /usr/local/obsidize-<version>-linux-amd64/bin/obsidize /usr/local/bin/obsidize
+```
 
 #### Verify installation
 
@@ -634,11 +663,16 @@ vars:
 
 ### Build Configuration Matrix
 
-| Build Type | Java | Native Image | Security Scan | Platforms | Artifacts |
-|------------|------|--------------|---------------|-----------|-----------|
-| **Local** | Any 21+ | Optional | No | Current OS | JAR |
-| **CI** | Temurin 21 | No | Yes (Linux) | Linux, macOS, ⚠️ Windows* | None |
-| **Release** | GraalVM 21 | Yes (macOS) | Yes (Linux) | Linux, macOS (x64/arm64), ⚠️ Windows* | JAR, Native, JLink |
+| Build Type | Java | Package Strategy | Security Scan | Platforms | Artifacts |
+|------------|------|------------------|---------------|-----------|-----------|
+| **Local** | Any 21+ | Universal JAR | No | Current OS | JAR |
+| **CI** | Temurin 21 | Platform Testing | Yes (Linux) | Linux, macOS, ⚠️ Windows* | None |
+| **Release** | GraalVM 21 | **Optimized per Platform** | Yes (Linux) | Linux, macOS (x64/arm64), ⚠️ Windows* | **JAR + Platform-Optimized** |
+
+**Release Artifacts by Platform:**
+- **macOS**: Universal JAR + Native executable package  
+- **Linux**: Universal JAR + JLink runtime package
+- **Windows**: Universal JAR only (optimized packaging in development)
 
 *Windows builds are experimental and may fail (non-blocking)
 
@@ -653,9 +687,9 @@ bb native-prereqs      # Check prerequisites
 
 **Platform Support**:
 
-- **macOS**: ✅ Full native image support (Intel/Apple Silicon)
-- **Linux**: 🔄 Native image support in development  
-- **Windows**: ❌ Native images not supported - build system issues prevent compilation
+- **macOS**: ✅ **Production ready** - Native executables for Homebrew distribution
+- **Linux**: 🔄 **Not prioritized** - JLink provides better cross-distro compatibility  
+- **Windows**: ❌ **Not supported** - Build system issues prevent compilation
 
 **Native Image Features**:
 - **ZIP file handling**: Complete java.util.zip support
@@ -753,15 +787,22 @@ export CLJ_CONFIG='{:mvn/local-repo ".m2"}'
 
 ### Build Output Structure
 
+The new optimized packaging strategy produces different artifacts per platform:
+
 ```
 target/release/{version}/
-├── obsidize-standalone.jar                    # Universal JAR
-├── obsidize-native                            # Native executable (macOS)
-├── obsidize-{version}-macos-aarch64.tar.gz   # JLink bundle (Apple Silicon)  
-├── obsidize-{version}-macos-x64.tar.gz       # JLink bundle (Intel Mac)
-├── obsidize-{version}-linux-amd64.tar.gz     # JLink bundle (Linux)
-└── obsidize-{version}-windows-x64.zip        # JLink bundle (Windows)
+├── obsidize-standalone.jar                           # Universal JAR (all platforms)
+│
+├── obsidize-native-{version}-macos-aarch64.tar.gz   # macOS native executable (Apple Silicon)
+├── obsidize-native-{version}-macos-x64.tar.gz       # macOS native executable (Intel)  
+│
+└── obsidize-{version}-linux-amd64.tar.gz            # Linux JLink runtime bundle
 ```
+
+**Platform-Specific Build Outputs:**
+- **macOS**: Universal JAR + Native executable package
+- **Linux**: Universal JAR + JLink runtime package  
+- **Windows**: Universal JAR only (optimized packaging in development)
 
 Use `bb dist` to list all available artifacts after a build.
 
@@ -1264,7 +1305,8 @@ Windows support is currently in development. The main issues preventing Windows 
 
 **📋 Todo:**
 - Resolve Clojure CLI installation issues
-- Windows-specific native image compilation
+- Windows JLink runtime package generation
+- Windows native executable compilation (future)
 - Comprehensive Windows e2e testing
 - Windows installation documentation
 
@@ -1312,8 +1354,8 @@ Until native Windows support is ready, Windows users can:
 #### **Timeline**
 
 - **Short term** (next release): Fix Clojure CLI installation
-- **Medium term** (2-3 releases): Working Windows builds in CI/CD
-- **Long term** (future releases): Native Windows executables, Chocolatey package
+- **Medium term** (2-3 releases): Windows JLink runtime packages  
+- **Long term** (future releases): Windows native executables, Chocolatey/Scoop packages
 
 ---
 

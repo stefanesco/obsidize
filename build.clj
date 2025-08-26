@@ -335,6 +335,53 @@
       (do (println "❌ native-image failed with exit" (:exit res))
           (System/exit (:exit res))))))
 
+(defn native-package [_]
+  "Create a native executable package for Homebrew distribution"
+  (println "📦 Creating native executable package for Homebrew...")
+
+  ;; Ensure we have the native executable
+  (when-not (fs/exists? native-bin)
+    (println "ℹ️  Native executable not found, building it...")
+    (native-image nil))
+
+  (let [plat (platform-id)
+        package-name (str "obsidize-native-" version "-" plat)
+        package-dir (str release-dir "/" package-name)
+        bin-dir (str package-dir "/bin")]
+
+    ;; Create package structure
+    (println "📁 Creating package structure...")
+    (fs/create-dirs bin-dir)
+
+    ;; Copy native executable
+    (println "📋 Copying native executable...")
+    (fs/copy native-bin (str bin-dir "/obsidize") {:replace-existing true})
+    (when (posix?) (fs/set-posix-file-permissions (str bin-dir "/obsidize") "rwxr-xr-x"))
+
+    ;; Create archive
+    (let [archive-path (str release-dir "/" package-name ".tar.gz")
+          image-parent release-dir
+          image-name package-name]
+
+      (println "🗜️  Creating native package archive:" archive-path)
+      (let [res (b/process {:command-args ["tar" "-czf" archive-path "-C" image-parent image-name]
+                            :out :inherit :err :inherit})]
+        (when-not (zero? (:exit res))
+          (println "❌ tar failed.")
+          (System/exit 1)))
+
+      ;; Create checksum
+      (when (fs/which "shasum")
+        (spit (str archive-path ".sha256")
+              (-> (b/process {:command-args ["shasum" "-a" "256" archive-path]
+                              :out :capture :err :inherit})
+                  :out (str/split #"\s+") first)))
+
+      ;; Validate the package
+      (validate-build-artifact archive-path "Native package archive" :min-size (* 10 1024 1024))
+
+      (println "✅ Native package created:" archive-path))))
+
 ;; --------------------------------------------------------------------
 ;; jlink (from runtime uber), optionally bundle native on macOS
 ;; --------------------------------------------------------------------
@@ -405,14 +452,6 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
                          (fs/file-name uber-file))]
       (write-file! launcher script))
 
-    ;; If native binary exists and we’re on macOS, include it
-    (when (and (re-find #"^macos-" plat)
-               (fs/exists? native-bin))
-      (let [dest (str bin-dir "/" native-artifact)]
-        (println "➕ Including native executable in image:" dest)
-        (fs/copy native-bin dest {:replace-existing true})
-        (when (posix?) (fs/set-posix-file-permissions dest "rwxr-xr-x"))))
-
     (println (str "✅ jlink runtime image created at: " out-dir))
 
     ;; Archive to release-dir
@@ -451,18 +490,48 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
                 (-> (b/process {:command-args ["shasum" "-a" "256" tgz-path]
                                 :out :capture :err :inherit})
                     :out (str/split #"\s+") first)))
-        (validate-jlink-artifacts nil)))))
+        (when (fs/exists? out-dir)
+          (validate-jlink-artifacts nil))))))
 
 ;; --------------------------------------------------------------------
 ;; Orchestrators
 ;; --------------------------------------------------------------------
 (defn build-all [_]
-  ;; plain runtime uber for jlink
+  (println "📦 Building Obsidize packages with optimized platform strategy...")
+  (println "   1. Universal JAR (all platforms)")
+  (println "   2. Linux: JLink runtime (Homebrew-ready)")
+  (println "   3. macOS: Native executable (Homebrew-ready)")
+
+  ;; Always build the universal JAR
   (uber-runtime nil)
-  ;; native image (own jar + flags)
-  (native-image nil)
-  ;; jlink (includes native on macOS if present)
-  (jlink-image nil)
-  ;; Final comprehensive validation
+
+  ;; Platform-specific optimized builds
+  (let [platform (platform-id)]
+    (cond
+      ;; macOS: Build native executable package (best performance)
+      (re-find #"^macos-" platform)
+      (do
+        (println "🍎 macOS detected: Building native executable for Homebrew...")
+        (native-package nil)
+        (println "✅ Native executable package ready for macOS Homebrew distribution"))
+
+      ;; Linux: Build JLink runtime bundle (best compatibility)
+      (re-find #"^linux-" platform)
+      (do
+        (println "🐧 Linux detected: Building JLink runtime for Homebrew...")
+        (jlink-image nil)
+        (println "✅ JLink runtime ready for Linux Homebrew distribution"))
+
+      ;; Other platforms: JAR only (fallback)
+      :else
+      (println "ℹ️  Platform-specific packages not supported for" platform "- JAR available")))
+
+  ;; Final validation
   (validate-all-artifacts nil)
-  (println "🎁 Done: runtime uber, native image, and jlink archives."))
+  (println "")
+  (println "🎁 Package build complete!")
+  (println "   📄 Universal JAR: Available for all Java 21+ platforms")
+  (println "   🍺 Homebrew-ready:" (cond
+                                     (re-find #"^macos-" (platform-id)) "Native executable package"
+                                     (re-find #"^linux-" (platform-id)) "JLink runtime package"
+                                     :else "Not available for this platform")))

@@ -72,7 +72,7 @@ concurrency:
 
 jobs:
   build-release:
-    name: Build ${{ matrix.name }} (native + jlink)
+    name: Build ${{ matrix.name }} (${{ matrix.package_type }})
     continue-on-error: ${{ matrix.os_id == 'Windows' }}
     strategy:
       fail-fast: false
@@ -83,21 +83,25 @@ jobs:
             arch: amd64
             os_id: Linux
             platform_id: linux-amd64
+            package_type: JLink Runtime
           - os: macos-13
             name: macOS (amd64)
             arch: amd64
             os_id: macOS
             platform_id: macos-x64
+            package_type: Native Executable
           - os: macos-14
             name: macOS (arm64)
             arch: arm64
             os_id: macOS
             platform_id: macos-aarch64
+            package_type: Native Executable
           - os: windows-latest
             name: Windows (amd64) [EXPERIMENTAL]
             arch: amd64
             os_id: Windows
             platform_id: windows-x64
+            package_type: JAR Only
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -362,17 +366,26 @@ jobs:
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           body: |
-            ## Supported Platforms
+            ## Package Distribution Strategy
             
-            ✅ **Stable Releases:**
-            - Linux (amd64) - Native binary + JLink runtime
-            - macOS (amd64) - Native binary + JLink runtime  
-            - macOS (arm64) - Native binary + JLink runtime
+            **📄 Universal JAR:** `obsidize-standalone.jar`
+            - Works on any platform with Java 21+
+            - Usage: `java -jar obsidize-standalone.jar --help`
             
-            ⚠️ **Experimental:**
-            - Windows (amd64) - Development in progress
+            **🍺 Homebrew Packages:**
+            - **macOS**: Native executable (fastest startup, no Java required)
+            - **Linux**: JLink runtime bundle (includes optimized JRE)
+            - Install: `brew install stefanesco/obsidize/obsidize`
             
-            See [Installation Guide](https://github.com/${{ github.repository }}#installation) for platform-specific instructions.
+            **✅ Stable Platforms:**
+            - **macOS (amd64/arm64)**: Native executable via Homebrew
+            - **Linux (amd64)**: JLink runtime via Homebrew  
+            - **All platforms**: Universal JAR for direct Java usage
+            
+            **⚠️ Development Status:**
+            - **Windows**: Universal JAR available, native packaging in development
+            
+            See [Installation Guide](https://github.com/${{ github.repository }}#installation) for detailed instructions.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
