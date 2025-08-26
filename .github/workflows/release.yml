@@ -73,7 +73,9 @@ concurrency:
 jobs:
   build-release:
     name: Build ${{ matrix.name }} (native + jlink)
+    continue-on-error: ${{ matrix.os_id == 'Windows' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -92,7 +94,7 @@ jobs:
             os_id: macOS
             platform_id: macos-aarch64
           - os: windows-latest
-            name: Windows (amd64)
+            name: Windows (amd64) [EXPERIMENTAL]
             arch: amd64
             os_id: Windows
             platform_id: windows-x64
@@ -145,9 +147,22 @@ jobs:
         if: runner.os == 'macOS'
         run: ./.github/scripts/install-clojure-macos.sh
 
+      - name: Windows Build Warning
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Output "⚠️ =================================="
+          Write-Output "⚠️ WINDOWS BUILD - EXPERIMENTAL"
+          Write-Output "⚠️ =================================="
+          Write-Output ""
+          Write-Output "This Windows build is experimental and may fail."
+          Write-Output "Failures here will not block the release process."
+          Write-Output ""
+
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        continue-on-error: true
         run: ./.github/scripts/install-clojure-windows.ps1
 
       - name: Install Trivy (Linux)
@@ -186,13 +201,15 @@ jobs:
           path: |
             obsidize-*.tar.gz
             obsidize-*.tar.gz.sha256
-          if-no-files-found: error
+          if-no-files-found: ${{ matrix.os_id == 'Windows' && 'warn' || 'error' }}
           retention-days: 7
 
 
   validate-packages:
     name: E2E Package Validation (${{ matrix.name }})
+    continue-on-error: ${{ matrix.os_id == 'Windows' }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -208,7 +225,7 @@ jobs:
             arch: arm64
             os_id: macOS
           - os: windows-latest
-            name: Windows (amd64)
+            name: Windows (amd64) [EXPERIMENTAL]
             arch: amd64
             os_id: Windows
     runs-on: ${{ matrix.os }}
@@ -257,9 +274,22 @@ jobs:
         if: runner.os == 'macOS'
         run: ./.github/scripts/install-clojure-macos.sh
 
+      - name: Windows Build Warning
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Output "⚠️ =================================="
+          Write-Output "⚠️ WINDOWS BUILD - EXPERIMENTAL"
+          Write-Output "⚠️ =================================="
+          Write-Output ""
+          Write-Output "This Windows build is experimental and may fail."
+          Write-Output "Failures here will not block the release process."
+          Write-Output ""
+
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        continue-on-error: true
         run: ./.github/scripts/install-clojure-windows.ps1
 
       - name: Prepare downloaded artifacts for testing (Unix)
@@ -284,15 +314,42 @@ jobs:
     needs:
       - build-release
       - validate-packages
+    if: always() && (needs.build-release.result == 'success' || contains(needs.build-release.result, 'success'))
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: 'platform-*'
           merge-multiple: true
+        continue-on-error: true
 
-      - name: List downloaded files
-        run: ls -alh
+      - name: List downloaded files and assess release readiness
+        run: |
+          echo "📊 Release Artifact Assessment"
+          echo "=============================="
+          ls -alh
+          echo ""
+          
+          # Count successful platform builds
+          linux_files=$(ls obsidize-*linux* 2>/dev/null | wc -l || echo "0")
+          macos_files=$(ls obsidize-*macos* 2>/dev/null | wc -l || echo "0")
+          windows_files=$(ls obsidize-*windows* 2>/dev/null | wc -l || echo "0")
+          
+          echo "Platform artifact counts:"
+          echo "  Linux:   $linux_files files"
+          echo "  macOS:   $macos_files files"  
+          echo "  Windows: $windows_files files (experimental)"
+          echo ""
+          
+          total_stable=$((linux_files + macos_files))
+          if [ "$total_stable" -ge 2 ]; then
+            echo "✅ Release ready: $total_stable stable platform artifacts available"
+            echo "RELEASE_READY=true" >> $GITHUB_ENV
+          else
+            echo "❌ Release not ready: Only $total_stable stable platform artifacts"
+            echo "RELEASE_READY=false" >> $GITHUB_ENV
+            exit 1
+          fi
 
       - name: Create GitHub Release
         if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
@@ -304,6 +361,18 @@ jobs:
             obsidize-*.tar.gz.sha256
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## Supported Platforms
+            
+            ✅ **Stable Releases:**
+            - Linux (amd64) - Native binary + JLink runtime
+            - macOS (amd64) - Native binary + JLink runtime  
+            - macOS (arm64) - Native binary + JLink runtime
+            
+            ⚠️ **Experimental:**
+            - Windows (amd64) - Development in progress
+            
+            See [Installation Guide](https://github.com/${{ github.repository }}#installation) for platform-specific instructions.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

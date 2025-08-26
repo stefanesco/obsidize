@@ -30,11 +30,17 @@ Obsidize is a tool that aims to make it easy to import and maintain the conversa
 
 ## &#128190; Obsidize Package
 
-Obsidize is available for macOS, Linux and Windows:
+### ✅ **Supported Platforms**
 
-- on macOS: Homebrew support (based on native-image built with GraalVM - fast, native performance), self-contained binary (built with jlink - JRE+jar) and stand-alone jar
-- on Linux: Homebrew support (based on the self-contained binary built with jlink - JRE+jar) and stand-alone jar
-- on Windows: self-contained binary (built with jlink - JRE+jar) and stand-alone jar
+- **macOS**: Homebrew support (native binary via GraalVM - fast startup), JLink runtime bundle (JRE+jar), and standalone JAR
+- **Linux**: Homebrew support (JLink runtime bundle), and standalone JAR
+
+### ⚠️ **Platform Status**
+
+- **Windows**: ❌ **Currently not working** - Windows support is in development
+  - Build system integration is incomplete  
+  - Clojure CLI installation issues prevent Windows builds
+  - Tracked in [Windows Support Roadmap](#-windows-support-roadmap)
 
 ## 🚀 Quick Install
 
@@ -51,26 +57,25 @@ brew install stefanesco/obsidize/obsidize
 brew upgrade obsidize
 ```
 
-### Manual Download (macOS/Linux/Windows)
+### Manual Download (macOS/Linux)
 
-From the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest) download the package for your platform (e.g., `obsidize-macos-amd64.tar.gz` or `obsidize-linux-amd64.tar.gz`).
+From the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest) download the package for your platform:
+- **macOS**: `obsidize-<version>-macos-aarch64.tar.gz` (Apple Silicon) or `obsidize-<version>-macos-x64.tar.gz` (Intel)
+- **Linux**: `obsidize-<version>-linux-amd64.tar.gz`
 
 Extract and add to your PATH:
 
-a. For macOS/Linux:
-
 ```bash
-   tar -xzf obsidize-<platform>.tar.gz
-   mv obsidize /usr/local/bin/  # Or any directory in your PATH
-   ```
+tar -xzf obsidize-<version>-<platform>.tar.gz
+# The archive contains a complete runtime - no Java installation required
+./obsidize-<version>-<platform>/bin/obsidize --help
 
-b. For Windows:
+# Optional: Add to PATH for system-wide access
+sudo cp -r obsidize-<version>-<platform> /usr/local/
+sudo ln -sf /usr/local/obsidize-<version>-<platform>/bin/obsidize /usr/local/bin/obsidize
+```
 
-```powershell
-   Expand-Archive obsidize-<platform>.zip -DestinationPath C:\Program Files\obsidize
-   ```
-
-To manually update: Download the new version and replace the binary.
+**Note**: ⚠️ Windows packages are not currently available due to build system issues.
 
 #### Verify installation
 
@@ -632,21 +637,25 @@ vars:
 | Build Type | Java | Native Image | Security Scan | Platforms | Artifacts |
 |------------|------|--------------|---------------|-----------|-----------|
 | **Local** | Any 21+ | Optional | No | Current OS | JAR |
-| **CI** | Temurin 21 | No | Yes (Linux) | Linux, macOS, Windows | None |
-| **Release** | GraalVM 21 | Yes (macOS) | Yes (Linux) | Linux, macOS (x64/arm64), Windows | JAR, Native, JLink |
+| **CI** | Temurin 21 | No | Yes (Linux) | Linux, macOS, ⚠️ Windows* | None |
+| **Release** | GraalVM 21 | Yes (macOS) | Yes (Linux) | Linux, macOS (x64/arm64), ⚠️ Windows* | JAR, Native, JLink |
+
+*Windows builds are experimental and may fail (non-blocking)
 
 ### Native Image Compilation
 
 **Requirements**:
+
 ```bash
 # GraalVM with native-image tool
 bb native-prereqs      # Check prerequisites
-
-# Platform support
-- macOS: ✅ Full support (Intel/Apple Silicon)
-- Linux: 🔄 Work in progress  
-- Windows: ❌ Not currently supported
 ```
+
+**Platform Support**:
+
+- **macOS**: ✅ Full native image support (Intel/Apple Silicon)
+- **Linux**: 🔄 Native image support in development  
+- **Windows**: ❌ Native images not supported - build system issues prevent compilation
 
 **Native Image Features**:
 - **ZIP file handling**: Complete java.util.zip support
@@ -1217,6 +1226,96 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 ### Fallback Behavior
 
 All variables (except input path) have sensible defaults, so workflows will continue to work even if no custom variables are configured. The syntax `${{ vars.VARIABLE_NAME || 'default-value' }}` ensures robust fallback behavior.
+
+## 🪟 Windows Support Roadmap
+
+### Current Status: ❌ Not Working
+
+Windows support is currently in development. The main issues preventing Windows builds:
+
+#### **Known Issues**
+
+1. **Clojure CLI Installation Failure**
+   - Chocolatey package installs successfully but `clojure` command not accessible
+   - PowerShell PATH configuration issues in GitHub Actions environment
+   - Missing executables in expected installation directories
+
+2. **Build System Integration**
+   - Windows-specific script execution challenges
+   - Cross-platform build tooling gaps
+   - Native image compilation not yet tested
+
+3. **Testing Infrastructure**
+   - Limited Windows testing coverage in CI pipeline
+   - Package validation needs Windows-specific adjustments
+
+#### **Development Progress**
+
+**✅ Completed:**
+- GitHub Actions Windows runner setup
+- Non-blocking Windows builds (warnings only)
+- Chocolatey-based Clojure installation scripts
+- Cross-platform build detection logic
+
+**🔄 In Progress:**
+- PowerShell Clojure CLI installation debugging
+- Windows package artifact generation
+- Cross-platform path handling improvements
+
+**📋 Todo:**
+- Resolve Clojure CLI installation issues
+- Windows-specific native image compilation
+- Comprehensive Windows e2e testing
+- Windows installation documentation
+
+#### **Contribution Welcome**
+
+Windows support development is community-driven. If you have Windows expertise and would like to help:
+
+1. **Test the current state:**
+   ```bash
+   git clone https://github.com/stefanesco/obsidize
+   cd obsidize
+   bb test  # See if basic functionality works
+   ```
+
+2. **Debug installation issues:**
+   - Review `.github/scripts/install-clojure-windows.ps1`
+   - Test Clojure CLI installation locally
+   - Identify PATH and PowerShell execution issues
+
+3. **Submit contributions:**
+   - File issues with detailed Windows environment info
+   - Submit PRs with Windows-specific fixes
+   - Help improve cross-platform compatibility
+
+#### **Workaround for Windows Users**
+
+Until native Windows support is ready, Windows users can:
+
+1. **Use WSL (Windows Subsystem for Linux):**
+   ```bash
+   # Install WSL and Ubuntu
+   # Then follow Linux installation instructions
+   brew install stefanesco/obsidize/obsidize
+   ```
+
+2. **Use Java JAR directly:**
+   ```bash
+   # Requires Java 21+ installed
+   java -jar obsidize-standalone.jar --input data.dms --output-dir vault/
+   ```
+
+3. **Docker container (future):**
+   - Docker support planned for cross-platform compatibility
+
+#### **Timeline**
+
+- **Short term** (next release): Fix Clojure CLI installation
+- **Medium term** (2-3 releases): Working Windows builds in CI/CD
+- **Long term** (future releases): Native Windows executables, Chocolatey package
+
+---
 
 ## 📝 <a name="license"></a>License
 
