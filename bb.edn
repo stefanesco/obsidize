@@ -114,7 +114,7 @@
                    (= exit-code 2) (println "⚠️  Dependency audit errors detected (non-breaking).")
                    :else (do
                            (println "⚠️  Dependency audit failed unexpectedly (non-breaking).")
-                           (println "   Error:" (.getMessage e)))))))}
+                           (println "   Error:" (.getMessage e))))))))}
 
   check-trivy
   {:doc "Check if Trivy is installed and available on the PATH."
