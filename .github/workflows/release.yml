@@ -139,171 +139,44 @@ jobs:
 
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🔒 Installing Clojure CLI with security validation..."
-          curl -fsSL "${{ env.CLOJURE_DOWNLOAD_URL }}/linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh" -o "linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh"
-          
-          # Security: Validate downloaded script checksum
-          echo "${{ env.CLOJURE_INSTALL_SHA256 }} linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh" | sha256sum -c
-          if [ $? -ne 0 ]; then
-            echo "❌ Clojure installer checksum validation failed"
-            exit 1
-          fi
-          echo "✅ Clojure installer checksum validated"
-          
-          chmod +x "linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh"
-          sudo "./linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh"
+        run: ./.github/scripts/install-clojure-linux.sh
 
       - name: Install Clojure CLI (macOS)
         if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🔒 Installing Clojure CLI via Homebrew..."
-          brew install clojure/tools/clojure
+        run: ./.github/scripts/install-clojure-macos.sh
 
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          echo "🔒 Installing Clojure CLI via Chocolatey with version validation..."
-          
-          # Install specific version for reproducibility
-          choco install clojure --version ${{ env.CHOCOLATEY_CLOJURE_VERSION }} -y
-          
-          # Verify installation and version
-          clojure -version
-          $installedVersion = clojure -version 2>&1 | Select-String -Pattern "Clojure CLI version (\d+\.\d+\.\d+\.\d+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }
-          
-          if ($installedVersion -ne "${{ env.CHOCOLATEY_CLOJURE_VERSION }}") {
-            Write-Error "❌ Clojure version mismatch. Expected: ${{ env.CHOCOLATEY_CLOJURE_VERSION }}, Got: $installedVersion"
-            exit 1
-          }
-          
-          Write-Output "✅ Clojure CLI $installedVersion installed and validated"
+        run: ./.github/scripts/install-clojure-windows.ps1
 
       - name: Install Trivy (Linux)
         if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🔒 Installing Trivy with GPG key validation..."
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release
-          
-          # Security: Download and validate GPG key
-          wget -qO trivy.key "${{ env.TRIVY_PUBLIC_KEY_URL }}"
-          
-          # Validate GPG key ID (more reliable than fingerprint matching)
-          if ! file trivy.key | grep -q "PGP public key"; then
-            echo "❌ Downloaded file is not a valid PGP public key"
-            exit 1
-          fi
-          echo "✅ Trivy GPG public key validated (Key ID: ${{ env.TRIVY_GPG_KEY_ID }})"
-          
-          # Import validated key
-          sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg < trivy.key
-          rm trivy.key
-          
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update && sudo apt-get install -y trivy
+        run: ./.github/scripts/install-trivy-linux.sh
 
       - name: Install Trivy (macOS)
         if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🔒 Installing Trivy via Homebrew..."
-          brew install aquasecurity/trivy/trivy
+        run: ./.github/scripts/install-trivy-macos.sh
 
-      - name: Set Release Version Env
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          
-          # Security: Validate version format to prevent command injection
-          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
-            echo "❌ Invalid version format: $VERSION"
-            echo "Expected format: v1.2.3 or v1.2.3-alpha.1"
-            exit 1
-          fi
-          echo "✅ Version format validated: $VERSION"
-          
-          echo "RELEASE_VERSION=$VERSION" >> $GITHUB_ENV
+      - name: Set Release Version Env (Unix)
+        if: runner.os != 'Windows'
+        run: ./.github/scripts/validate-version.sh "${{ github.event.inputs.version || github.ref_name }}"
+
+      - name: Set Release Version Env (Windows)
+        if: runner.os == 'Windows'
+        run: ./.github/scripts/validate-version.ps1 "${{ github.event.inputs.version || github.ref_name }}"
 
       # Build everything and run e2e validation (tests, uberjar, native-image, jlink image + archives)
       - name: Build and validate with e2e tests (bb validate-release)
         run: bb validate-release
 
       # --- Stage comprehensive platform tarballs with all artifacts ---
-      - name: Stage platform tarball with all artifacts
-        shell: bash
-        run: |
-          set -euo pipefail
-          VERSION="$(echo "${RELEASE_VERSION}" | sed 's/^v//')"
-          RELEASE_DIR="target/release/${VERSION}"
-          PLATFORM_ID="${{ matrix.platform_id }}"
-          OS_ID="${{ matrix.os_id }}"
+      - name: Stage platform tarball with all artifacts (Unix)
+        if: runner.os != 'Windows'
+        run: ./.github/scripts/prepare-release-artifacts.sh "${{ matrix.platform_id }}" "${{ matrix.os_id }}"
 
-          echo "📦 Creating comprehensive tarball for ${OS_ID} (${PLATFORM_ID})"
-          STAGE_DIR="$(mktemp -d)/obsidize-${VERSION}-${PLATFORM_ID}"
-          mkdir -p "${STAGE_DIR}/bin"
-
-          # Always include standalone JAR
-          if [[ -f "${RELEASE_DIR}/obsidize-standalone.jar" ]]; then
-            cp "${RELEASE_DIR}/obsidize-standalone.jar" "${STAGE_DIR}/"
-            echo "✅ Added standalone JAR"
-          else
-            echo "❌ Missing standalone JAR at ${RELEASE_DIR}/obsidize-standalone.jar"
-            exit 1
-          fi
-
-          # Include native image for macOS
-          if [[ "${OS_ID}" == "macOS" && -f "${RELEASE_DIR}/obsidize-native" ]]; then
-            install -m 0755 "${RELEASE_DIR}/obsidize-native" "${STAGE_DIR}/bin/obsidize-native"
-            echo "✅ Added native image for macOS"
-          fi
-
-          # Extract and include jlink distribution for all platforms
-          JLINK_ARCHIVE="$(ls "${RELEASE_DIR}"/obsidize-"${VERSION}"-${PLATFORM_ID}.* 2>/dev/null | head -n1 || true)"
-          if [[ -n "$JLINK_ARCHIVE" ]]; then
-            echo "✅ Found jlink archive: $JLINK_ARCHIVE"
-            TEMP_EXTRACT="$(mktemp -d)"
-            
-            if [[ "$JLINK_ARCHIVE" == *.zip ]]; then
-              unzip -q "$JLINK_ARCHIVE" -d "$TEMP_EXTRACT"
-            else
-              tar -xf "$JLINK_ARCHIVE" -C "$TEMP_EXTRACT"
-            fi
-            
-            # Find the extracted jlink directory
-            JLINK_DIR="$(find "$TEMP_EXTRACT" -maxdepth 1 -type d -name "obsidize-*" | head -n1)"
-            if [[ -n "$JLINK_DIR" ]]; then
-              # Copy jlink contents to our stage directory
-              cp -r "$JLINK_DIR"/* "${STAGE_DIR}/"
-              echo "✅ Added jlink distribution"
-            else
-              echo "❌ Could not find jlink directory in archive"
-              exit 1
-            fi
-            
-            rm -rf "$TEMP_EXTRACT"
-          else
-            echo "❌ No jlink archive found for ${PLATFORM_ID}"
-            exit 1
-          fi
-
-          # Create final tarball
-          TAR_NAME="obsidize-${VERSION}-${PLATFORM_ID}.tar.gz"
-          tar -C "$(dirname "${STAGE_DIR}")" -czf "$TAR_NAME" "$(basename "${STAGE_DIR}")"
-          shasum -a 256 "$TAR_NAME" | awk '{print $1}' > "${TAR_NAME}.sha256"
-          
-          echo "✅ Created comprehensive tarball: $TAR_NAME"
-          echo "Contents:"
-          tar -tzf "$TAR_NAME" | head -20
+      - name: Stage platform tarball with all artifacts (Windows)
+        if: runner.os == 'Windows'
+        run: ./.github/scripts/prepare-release-artifacts.ps1 "${{ matrix.platform_id }}" "${{ matrix.os_id }}"
 
       - name: Upload comprehensive platform artifact
         uses: actions/upload-artifact@${{ env.UPLOAD_ARTIFACT_ACTION_VERSION }}
@@ -377,74 +250,23 @@ jobs:
 
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL "${{ env.CLOJURE_DOWNLOAD_URL }}/linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh" -o "linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh"
-          echo "${{ env.CLOJURE_INSTALL_SHA256 }} linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh" | sha256sum -c
-          chmod +x "linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh"
-          sudo "./linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh"
+        run: ./.github/scripts/install-clojure-linux.sh
 
       - name: Install Clojure CLI (macOS)
         if: runner.os == 'macOS'
-        shell: bash
-        run: brew install clojure/tools/clojure
+        run: ./.github/scripts/install-clojure-macos.sh
 
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          choco install clojure --version ${{ env.CHOCOLATEY_CLOJURE_VERSION }} -y
-          clojure -version
+        run: ./.github/scripts/install-clojure-windows.ps1
 
-      - name: Prepare downloaded artifacts for testing
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "📦 Setting up comprehensive artifacts for e2e validation..."
-          ls -la validation-artifacts/ || echo "No artifacts found"
-          
-          # Create target structure expected by e2e tests
-          mkdir -p target/release/test-validation
-          
-          # Extract the comprehensive platform tarball
-          PLATFORM_TAR="$(find validation-artifacts -name "obsidize-*.tar.gz" | head -n1)"
-          if [[ -n "$PLATFORM_TAR" ]]; then
-            echo "✅ Found platform tarball: $PLATFORM_TAR"
-            tar -xzf "$PLATFORM_TAR" -C target/release/test-validation/ --strip-components=1
-            echo "✅ Extracted comprehensive platform artifacts"
-          else
-            echo "❌ No platform tarball found"
-            exit 1
-          fi
-          
-          echo "Contents of target/release/test-validation/:"
-          ls -la target/release/test-validation/ || echo "Empty"
-          
-          # Verify expected artifacts are present
-          if [[ -f target/release/test-validation/obsidize-standalone.jar ]]; then
-            echo "✅ Found standalone JAR"
-          else
-            echo "❌ Missing standalone JAR"
-            exit 1
-          fi
-          
-          if [[ -f target/release/test-validation/bin/obsidize ]]; then
-            echo "✅ Found jlink launcher script"
-          else
-            echo "❌ Missing jlink launcher script"
-            exit 1
-          fi
-          
-          # Check for native binary on macOS
-          if [[ "${{ matrix.os_id }}" == "macOS" ]]; then
-            if [[ -f target/release/test-validation/bin/obsidize-native ]]; then
-              echo "✅ Found native binary for macOS"
-            else
-              echo "❌ Missing native binary for macOS"
-              exit 1
-            fi
-          fi
+      - name: Prepare downloaded artifacts for testing (Unix)
+        if: runner.os != 'Windows'
+        run: ./.github/scripts/prepare-validation-artifacts.sh "${{ matrix.os_id }}"
+
+      - name: Prepare downloaded artifacts for testing (Windows)
+        if: runner.os == 'Windows'
+        run: ./.github/scripts/prepare-validation-artifacts.ps1 "${{ matrix.os_id }}"
 
       - name: Run e2e validation tests
         shell: bash
@@ -497,43 +319,7 @@ jobs:
           path: artifacts
 
       - name: Compute SHAs & URLs for Homebrew
-        id: brewinfo
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          TAG_NAME="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION="${TAG_NAME#v}"
-          REPO="${{ github.repository }}"
-
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "REPO=$REPO" >> "$GITHUB_ENV"
-          echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
-
-          echo "Artifacts tree:"; ls -R artifacts || true
-
-          ARM_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
-          AMD_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
-
-          if [[ -z "$ARM_TGZ" || -z "$AMD_TGZ" ]]; then
-            echo "Missing macOS jlink tarballs. Found:"; find artifacts -type f -name "obsidize-*.tar.gz" -maxdepth 2 -print
-            exit 1
-          fi
-
-          ARM_SHA="$(shasum -a 256 "$ARM_TGZ" | awk '{print $1}')"
-          AMD_SHA="$(shasum -a 256 "$AMD_TGZ" | awk '{print $1}')"
-
-          echo "ARM64_SHA=$ARM_SHA" >> "$GITHUB_ENV"
-          echo "AMD64_SHA=$AMD_SHA" >> "$GITHUB_ENV"
-          echo "ARM64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$ARM_TGZ")" >> "$GITHUB_ENV"
-          echo "AMD64_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$AMD_TGZ")" >> "$GITHUB_ENV"
-
-          LINUX_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-linux-*.tar.gz" -print -quit || true)"
-          if [[ -n "$LINUX_TGZ" ]]; then
-            LINUX_SHA="$(shasum -a 256 "$LINUX_TGZ" | awk '{print $1}')"
-            echo "LINUX_SHA=$LINUX_SHA" >> "$GITHUB_ENV"
-            echo "LINUX_URL=https://github.com/$REPO/releases/download/$TAG_NAME/$(basename "$LINUX_TGZ")" >> "$GITHUB_ENV"
-          fi
+        run: ./.github/scripts/compute-homebrew-shas.sh "${{ github.event.inputs.version || github.ref_name }}" "${{ github.repository }}"
 
       - name: Clone Homebrew tap
         env:

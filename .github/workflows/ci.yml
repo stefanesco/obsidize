@@ -91,81 +91,20 @@ jobs:
       # Clojure CLI per-OS
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🔒 Downloading Clojure installer with security validation..."
-          curl -fsSL "${{ env.CLOJURE_DOWNLOAD_URL }}/linux-install-${{ env.CLOJURE_CLI_VERSION }}.sh" -o clojure.sh
-
-          # Security: Validate downloaded script checksum in a fail-safe way
-          if ! echo "${{ env.CLOJURE_INSTALL_SHA256 }}  clojure.sh" | sha256sum -c --status; then
-            echo "❌ Clojure installer checksum validation failed"
-            exit 1
-          fi
-          echo "✅ Clojure installer checksum validated"
-
-          chmod +x clojure.sh
-          sudo ./clojure.sh
+        run: ./.github/scripts/install-clojure-linux.sh
 
       - name: Install Clojure CLI (macOS)
         if: runner.os == 'macOS'
-        shell: bash
-        run: |
-          set -euo pipefail
-          brew install clojure/tools/clojure
+        run: ./.github/scripts/install-clojure-macos.sh
 
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          Write-Output "🔒 Installing Clojure CLI via Chocolatey with version validation..."
-
-          choco install clojure --version $env:CHOCOLATEY_CLOJURE_VERSION -y --no-progress
-
-          # Verify exact installed version via Chocolatey
-          $pkg = choco list --local-only --exact clojure --limit-output
-          if (-not $pkg) {
-            throw "❌ Clojure package not found after installation."
-          }
-          $installedVersion = ($pkg -split '\|')[1]
-          if ($installedVersion -ne $env:CHOCOLATEY_CLOJURE_VERSION) {
-            throw "❌ Clojure version mismatch. Expected: $env:CHOCOLATEY_CLOJURE_VERSION, Got: $installedVersion"
-          }
-          Write-Output "✅ Clojure CLI $installedVersion installed and validated"
+        run: ./.github/scripts/install-clojure-windows.ps1
 
       # Trivy only on Linux
       - name: Install Trivy (Linux)
         if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "🔒 Installing Trivy with GPG key validation..."
-          sudo apt-get update
-          sudo apt-get install -y wget gnupg lsb-release
-
-          # Security: Download and validate GPG key and Key ID
-          wget -qO trivy.key "${{ env.TRIVY_PUBLIC_KEY_URL }}"
-          if ! file trivy.key | grep -q "PGP public key"; then
-            echo "❌ Downloaded file is not a valid PGP public key"
-            exit 1
-          fi
-
-          KEYINFO=$(gpg --show-keys --keyid-format LONG trivy.key)
-          echo "$KEYINFO"
-          if ! echo "$KEYINFO" | grep -q "${{ env.TRIVY_GPG_KEY_ID }}"; then
-            echo "❌ Trivy GPG key ID mismatch. Expected ${{ env.TRIVY_GPG_KEY_ID }}"
-            exit 1
-          fi
-          echo "✅ Trivy GPG public key validated (Key ID: ${{ env.TRIVY_GPG_KEY_ID }})"
-
-          # Import validated key
-          sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg < trivy.key
-          rm trivy.key
-
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" \
-            | sudo tee /etc/apt/sources.list.d/trivy.list >/dev/null
-          sudo apt-get update && sudo apt-get install -y trivy
+        run: ./.github/scripts/install-trivy-linux.sh
 
       # Linux: run full pipeline (includes Trivy/audit per bb task)
       - name: Run CI pipeline (Linux)
