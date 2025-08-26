@@ -40,9 +40,20 @@ Start-Sleep -Seconds 2
 # First, let's explore what was actually installed
 Write-Output "🔍 Examining Clojure installation structure..."
 
+# First, let's see what was actually installed
+Write-Output "📂 Examining actual installation contents..."
+if (Test-Path $ClojureToolsPath) {
+    Write-Output "  - Contents of tools directory:"
+    Get-ChildItem $ClojureToolsPath -Recurse | ForEach-Object {
+        Write-Output "    $($_.FullName) $(if ($_.PSIsContainer) {'[DIR]'} else {"[$($_.Length) bytes]"})"
+    }
+}
+
 # Check all possible locations for clojure executables
 $PossiblePaths = @(
     $ClojureToolsPath,
+    "$ClojureToolsPath\bin",
+    "$ClojureToolsPath\ClojureTools",
     $ChocolateyBinPath,
     "$ClojureLibPath\bin",
     "$env:ProgramFiles\Clojure\bin",
@@ -53,12 +64,23 @@ $ClojureExecutables = @()
 foreach ($Path in $PossiblePaths) {
     if (Test-Path $Path) {
         Write-Output "  - Checking path: $Path"
-        $exes = Get-ChildItem $Path -Filter "clojure*" -File -ErrorAction SilentlyContinue
-        if ($exes) {
-            Write-Output "    Found executables: $($exes.Name -join ', ')"
-            $ClojureExecutables += $exes | ForEach-Object { $_.FullName }
+        # Look specifically for clojure and clj scripts (the standard Clojure CLI tools)
+        $clojureFiles = @()
+        $clojureFiles += Get-ChildItem $Path -Filter "clojure*" -File -ErrorAction SilentlyContinue
+        $clojureFiles += Get-ChildItem $Path -Filter "clj*" -File -ErrorAction SilentlyContinue
+        
+        $allFiles = Get-ChildItem $Path -File -ErrorAction SilentlyContinue
+        
+        if ($clojureFiles) {
+            Write-Output "    Found Clojure tools: $($clojureFiles.Name -join ', ')"
+            $ClojureExecutables += $clojureFiles | ForEach-Object { $_.FullName }
         } else {
-            Write-Output "    No clojure executables found"
+            Write-Output "    No clojure/clj scripts found (total files: $($allFiles.Count))"
+            if ($allFiles.Count -gt 0 -and $allFiles.Count -le 15) {
+                Write-Output "    Files present: $($allFiles.Name -join ', ')"
+            } elseif ($allFiles.Count -gt 15) {
+                Write-Output "    Sample files: $($allFiles[0..4].Name -join ', ')... (and $($allFiles.Count - 5) more)"
+            }
         }
     } else {
         Write-Output "  - Path does not exist: $Path"
@@ -77,21 +99,59 @@ if ($ClojureExecutables) {
     }
 }
 
-# Try direct execution of found executables first
+# Test the found Clojure tools
 $WorkingExecutable = $null
-foreach ($exe in $ClojureExecutables) {
-    Write-Output "🧪 Testing executable: $exe"
+Write-Output "🔍 Testing found Clojure tools: $($ClojureExecutables.Count) files"
+
+# Prioritize 'clojure' over 'clj' and exact matches over partial matches
+$PrioritizedExecutables = @()
+$PrioritizedExecutables += $ClojureExecutables | Where-Object { $_.Name -eq "clojure" -or $_.Name -eq "clojure.bat" -or $_.Name -eq "clojure.cmd" -or $_.Name -eq "clojure.ps1" }
+$PrioritizedExecutables += $ClojureExecutables | Where-Object { $_.Name -eq "clj" -or $_.Name -eq "clj.bat" -or $_.Name -eq "clj.cmd" -or $_.Name -eq "clj.ps1" }
+$PrioritizedExecutables += $ClojureExecutables | Where-Object { $_ -notin $PrioritizedExecutables }
+
+foreach ($exe in $PrioritizedExecutables) {
+    Write-Output "🧪 Testing: $($exe) ($(Split-Path -Leaf $exe))"
     try {
+        # For Clojure CLI, -version should work
         $result = & $exe -version 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Output "  ✅ Works! Version: $result"
+            Write-Output "  ✅ SUCCESS with -version! Output: $result"
             $WorkingExecutable = $exe
             break
         } else {
-            Write-Output "  ❌ Failed with exit code: $LASTEXITCODE"
+            Write-Output "  ❌ -version failed (exit: $LASTEXITCODE), output: $result"
         }
     } catch {
         Write-Output "  ❌ Exception: $($_.Exception.Message)"
+        # Try different approaches for scripts
+        if ($exe -match '\.(bat|cmd|ps1)$') {
+            try {
+                Write-Output "  🔄 Trying PowerShell execution for script..."
+                $result = powershell -Command "& '$exe' -version" 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Output "  ✅ SUCCESS via PowerShell! Output: $result"
+                    $WorkingExecutable = $exe
+                    break
+                }
+            } catch {
+                Write-Output "  ❌ PowerShell execution also failed: $($_.Exception.Message)"
+            }
+        }
+    }
+}
+
+# If no clojure executables found, check if we have java and can find clojure jars
+if (-not $WorkingExecutable) {
+    Write-Output "🔍 No clojure executables found, looking for Java + Clojure JARs..."
+    $javaExe = Get-Command java -ErrorAction SilentlyContinue
+    if ($javaExe) {
+        Write-Output "  ✅ Found Java: $($javaExe.Source)"
+        # Look for clojure jar files
+        $clojureJars = Get-ChildItem $ClojureToolsPath -Filter "*.jar" -Recurse -ErrorAction SilentlyContinue
+        if ($clojureJars) {
+            Write-Output "  ✅ Found Clojure JARs: $($clojureJars.Name -join ', ')"
+            # We'll handle this case by creating a wrapper script
+        }
     }
 }
 
