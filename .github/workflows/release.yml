@@ -147,7 +147,11 @@ jobs:
 
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
-        run: ./.github/scripts/install-clojure-windows.ps1
+        run: |
+          ./.github/scripts/install-clojure-windows.ps1
+          # Ensure PATH is updated for subsequent steps
+          echo "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Install Trivy (Linux)
         if: runner.os == 'Linux'
@@ -258,7 +262,11 @@ jobs:
 
       - name: Install Clojure CLI (Windows)
         if: runner.os == 'Windows'
-        run: ./.github/scripts/install-clojure-windows.ps1
+        run: |
+          ./.github/scripts/install-clojure-windows.ps1
+          # Ensure PATH is updated for subsequent steps
+          echo "$env:USERPROFILE\AppData\Local\Microsoft\WindowsApps" | Out-File -FilePath $env:GITHUB_PATH -Append
+          echo "C:\ProgramData\chocolatey\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
 
       - name: Prepare downloaded artifacts for testing (Unix)
         if: runner.os != 'Windows'
