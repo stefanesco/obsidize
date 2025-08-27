@@ -54,7 +54,7 @@ env:
   # -----------------------------------------------------------------------------
   # Security Tool Configuration
   # -----------------------------------------------------------------------------
-  # Trivy GPG Key ID: B5690EEEBB952194 (current official key from aquasecurity/trivy releases)
+  # Trivy GPG Key ID: E9D0A3616276FA6C (current official key from aquasecurity/trivy releases)
   TRIVY_GPG_KEY_ID: ${{ vars.TRIVY_GPG_KEY_ID || 'E9D0A3616276FA6C' }}
   TRIVY_PUBLIC_KEY_URL: ${{ vars.TRIVY_PUBLIC_KEY_URL || 'https://aquasecurity.github.io/trivy-repo/deb/public.key' }}
   
@@ -89,7 +89,7 @@ jobs:
             arch: amd64
             os_id: macOS
             platform_id: macos-x64
-            package_type: Native Executable
+            package_type: JLink Runtime
           - os: macos-14
             name: macOS (arm64)
             arch: arm64
@@ -373,12 +373,14 @@ jobs:
             - Usage: `java -jar obsidize-standalone.jar --help`
             
             **🍺 Homebrew Packages:**
-            - **macOS**: Native executable (fastest startup, no Java required)
+            - **macOS ARM64**: Native executable (fastest startup, no Java required)
+            - **macOS x86**: JLink runtime bundle (includes optimized JRE)
             - **Linux**: JLink runtime bundle (includes optimized JRE)
             - Install: `brew install stefanesco/obsidize/obsidize`
             
             **✅ Stable Platforms:**
-            - **macOS (amd64/arm64)**: Native executable via Homebrew
+            - **macOS ARM64**: Native executable via Homebrew
+            - **macOS x86**: JLink runtime via Homebrew  
             - **Linux (amd64)**: JLink runtime via Homebrew  
             - **All platforms**: Universal JAR for direct Java usage
             

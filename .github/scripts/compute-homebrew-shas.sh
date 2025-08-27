@@ -18,17 +18,17 @@ echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
 echo "Artifacts tree:"
 ls -R artifacts || true
 
-# macOS: Look for native executable packages
+# macOS: Look for ARM64 native executable and x86 JLink runtime packages
 ARM_TGZ="$(find artifacts -type f -name "obsidize-native-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
-AMD_TGZ="$(find artifacts -type f -name "obsidize-native-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
+AMD_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
 
 if [[ -z "$ARM_TGZ" || -z "$AMD_TGZ" ]]; then
-  echo "❌ Missing macOS native executable packages. Found:"
+  echo "❌ Missing macOS packages. Found:"
   find artifacts -type f -name "obsidize-*.tar.gz" -maxdepth 2 -print
   echo ""
   echo "Expected files:"
-  echo "  - obsidize-native-${VERSION}-macos-aarch64.tar.gz"
-  echo "  - obsidize-native-${VERSION}-macos-x64.tar.gz"
+  echo "  - obsidize-native-${VERSION}-macos-aarch64.tar.gz (native executable)"
+  echo "  - obsidize-${VERSION}-macos-x64.tar.gz (JLink runtime)"
   exit 1
 fi
 

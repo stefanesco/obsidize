@@ -500,7 +500,8 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
   (println "📦 Building Obsidize packages with optimized platform strategy...")
   (println "   1. Universal JAR (all platforms)")
   (println "   2. Linux: JLink runtime (Homebrew-ready)")
-  (println "   3. macOS: Native executable (Homebrew-ready)")
+  (println "   3. macOS ARM64: Native executable (Homebrew-ready)")
+  (println "   4. macOS x86: JLink runtime (Homebrew-ready)")
 
   ;; Always build the universal JAR
   (uber-runtime nil)
@@ -508,12 +509,19 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
   ;; Platform-specific optimized builds
   (let [platform (platform-id)]
     (cond
-      ;; macOS: Build native executable package (best performance)
-      (re-find #"^macos-" platform)
+      ;; macOS ARM64: Build native executable package (best performance on Apple Silicon)
+      (= platform "macos-aarch64")
       (do
-        (println "🍎 macOS detected: Building native executable for Homebrew...")
+        (println "🍎 macOS ARM64 detected: Building native executable for Homebrew...")
         (native-package nil)
-        (println "✅ Native executable package ready for macOS Homebrew distribution"))
+        (println "✅ Native executable package ready for macOS ARM64 Homebrew distribution"))
+
+      ;; macOS x86: Build JLink runtime bundle (native-image issues on x86)
+      (= platform "macos-x64")
+      (do
+        (println "🍎 macOS x86 detected: Building JLink runtime for Homebrew...")
+        (jlink-image nil)
+        (println "✅ JLink runtime ready for macOS x86 Homebrew distribution"))
 
       ;; Linux: Build JLink runtime bundle (best compatibility)
       (re-find #"^linux-" platform)
@@ -532,6 +540,6 @@ DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"
   (println "🎁 Package build complete!")
   (println "   📄 Universal JAR: Available for all Java 21+ platforms")
   (println "   🍺 Homebrew-ready:" (cond
-                                     (re-find #"^macos-" (platform-id)) "Native executable package"
-                                     (re-find #"^linux-" (platform-id)) "JLink runtime package"
+                                     (= (platform-id) "macos-aarch64") "Native executable package"
+                                     (or (= (platform-id) "macos-x64") (re-find #"^linux-" (platform-id))) "JLink runtime package"
                                      :else "Not available for this platform")))

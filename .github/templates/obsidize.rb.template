@@ -26,12 +26,28 @@ class Obsidize < Formula
 
   def install
     if OS.mac?
-      # macOS: Native executable package (direct binary)
-      if (buildpath/"bin/obsidize").exist?
-        # Install native binary directly
-        bin.install "bin/obsidize"
+      if Hardware::CPU.arm?
+        # macOS ARM64: Native executable package (direct binary)
+        if (buildpath/"bin/obsidize").exist?
+          # Install native binary directly
+          bin.install "bin/obsidize"
+        else
+          odie "No native executable found in macOS ARM64 package"
+        end
       else
-        odie "No native executable found in macOS package"
+        # macOS x86: JLink runtime package (includes JRE + application)
+        libexec.install Dir["*"]
+        
+        if (libexec/"bin/obsidize").exist?
+          # Create wrapper for JLink package
+          bin.write "obsidize", <<~EOS
+            #!/bin/bash
+            exec "#{libexec}/bin/obsidize" "$@"
+          EOS
+          chmod 0755, bin/"obsidize"
+        else
+          odie "No jlink executable found in macOS x86 package"
+        end
       end
     else
       # Linux: JLink runtime package (includes JRE + application)

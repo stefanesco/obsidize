@@ -36,13 +36,17 @@ Obsidize uses an **optimized packaging strategy** that provides the best install
 
 1. **📄 Universal JAR**: Works on any platform with Java 21+ 
 2. **🍺 Platform-Optimized Homebrew Packages**:
-   - **macOS**: Native executable (GraalVM) - fastest startup, no Java required
+   - **macOS ARM64**: Native executable (GraalVM) - fastest startup, no Java required
+   - **macOS x86**: JLink runtime bundle - includes optimized JRE, reliable compatibility
    - **Linux**: JLink runtime bundle - includes optimized JRE, reliable cross-distro support
 
 ### ✅ **Supported Platforms**
 
-- **macOS (Intel/Apple Silicon)**: 
+- **macOS (Apple Silicon)**: 
   - 🥇 **Homebrew** (native executable - recommended)
+  - 📄 Universal JAR
+- **macOS (Intel x86_64)**:
+  - 🥇 **Homebrew** (JLink runtime - recommended)
   - 📄 Universal JAR
 - **Linux (x86_64)**:
   - 🥇 **Homebrew** (JLink runtime - recommended) 
@@ -84,15 +88,25 @@ java -jar obsidize-standalone.jar --help
 
 **🍺 Platform-Optimized Packages**
 
-**macOS** - Native executable:
+**macOS Apple Silicon** - Native executable:
 ```bash
-# Download: obsidize-native-<version>-macos-aarch64.tar.gz (Apple Silicon)
-#       or: obsidize-native-<version>-macos-x64.tar.gz (Intel)
-tar -xzf obsidize-native-<version>-macos-*.tar.gz
-./obsidize-native-<version>-macos-*/bin/obsidize --help
+# Download: obsidize-native-<version>-macos-aarch64.tar.gz (Apple Silicon only)
+tar -xzf obsidize-native-<version>-macos-aarch64.tar.gz
+./obsidize-native-<version>-macos-aarch64/bin/obsidize --help
 
 # Add to PATH
-sudo cp obsidize-native-<version>-macos-*/bin/obsidize /usr/local/bin/
+sudo cp obsidize-native-<version>-macos-aarch64/bin/obsidize /usr/local/bin/
+```
+
+**macOS Intel x86** - JLink runtime (includes JRE):
+```bash
+# Download: obsidize-<version>-macos-x64.tar.gz
+tar -xzf obsidize-<version>-macos-x64.tar.gz
+./obsidize-<version>-macos-x64/bin/obsidize --help
+
+# Add to PATH  
+sudo cp -r obsidize-<version>-macos-x64 /usr/local/
+sudo ln -sf /usr/local/obsidize-<version>-macos-x64/bin/obsidize /usr/local/bin/obsidize
 ```
 
 **Linux** - JLink runtime (includes JRE):
@@ -636,8 +650,8 @@ bb dist                 # List built artifacts
 
 **Artifact Types**:
 1. **Native Executables**: 
-   - `obsidize-native-{version}-{platform}.tar.gz`
-   - Standalone binaries (currently macOS only)
+   - `obsidize-native-{version}-macos-aarch64.tar.gz`
+   - Standalone binaries (macOS ARM64 only)
    - Fastest startup, no JVM required
 
 2. **JLink Runtime Bundles**:
@@ -670,7 +684,8 @@ vars:
 | **Release** | GraalVM 21 | **Optimized per Platform** | Yes (Linux) | Linux, macOS (x64/arm64), ⚠️ Windows* | **JAR + Platform-Optimized** |
 
 **Release Artifacts by Platform:**
-- **macOS**: Universal JAR + Native executable package  
+- **macOS ARM64**: Universal JAR + Native executable package  
+- **macOS x86**: Universal JAR + JLink runtime package
 - **Linux**: Universal JAR + JLink runtime package
 - **Windows**: Universal JAR only (optimized packaging in development)
 
@@ -687,7 +702,8 @@ bb native-prereqs      # Check prerequisites
 
 **Platform Support**:
 
-- **macOS**: ✅ **Production ready** - Native executables for Homebrew distribution
+- **macOS ARM64**: ✅ **Production ready** - Native executables for Homebrew distribution
+- **macOS x86**: ❌ **Not supported** - Native-image issues, uses JLink runtime instead
 - **Linux**: 🔄 **Not prioritized** - JLink provides better cross-distro compatibility  
 - **Windows**: ❌ **Not supported** - Build system issues prevent compilation
 
@@ -794,13 +810,14 @@ target/release/{version}/
 ├── obsidize-standalone.jar                           # Universal JAR (all platforms)
 │
 ├── obsidize-native-{version}-macos-aarch64.tar.gz   # macOS native executable (Apple Silicon)
-├── obsidize-native-{version}-macos-x64.tar.gz       # macOS native executable (Intel)  
+├── obsidize-{version}-macos-x64.tar.gz              # macOS JLink runtime bundle (Intel)
 │
 └── obsidize-{version}-linux-amd64.tar.gz            # Linux JLink runtime bundle
 ```
 
 **Platform-Specific Build Outputs:**
-- **macOS**: Universal JAR + Native executable package
+- **macOS ARM64**: Universal JAR + Native executable package
+- **macOS x86**: Universal JAR + JLink runtime package
 - **Linux**: Universal JAR + JLink runtime package  
 - **Windows**: Universal JAR only (optimized packaging in development)
 
@@ -1088,7 +1105,7 @@ graph TD
 
 The pipeline produces multiple validated package types:
 - **GitHub Release:** Comprehensive release with all validated packages
-- **Native Executables:** `obsidize-native-{version}-{platform}.tar.gz` (macOS)
+- **Native Executables:** `obsidize-native-{version}-macos-aarch64.tar.gz` (macOS ARM64 only)
 - **JLink Bundles:** `obsidize-{version}-{platform}.tar.gz/.zip` (all platforms)
 - **Universal JAR:** `obsidize-standalone.jar` (platform-independent)
 - **Updated Homebrew Formula:** Automatic formula updates for easy installation

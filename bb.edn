@@ -206,7 +206,7 @@
    :task (shell "clojure -T:build native-image")}
 
   jlink-image
-  {:doc "Create jlink runtime image and archive (bundles native exe on macOS if present)."
+  {:doc "Create jlink runtime image and archive (bundles native exe on macOS ARM64 if present)."
    :task (shell "clojure -T:build jlink-image")}
 
   package
