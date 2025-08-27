@@ -4,7 +4,6 @@
 [![Release](https://github.com/stefanesco/obsidize/workflows/Create%20Release/badge.svg)](https://github.com/stefanesco/obsidize/actions/workflows/release.yml)
 [![Latest Release](https://img.shields.io/github/v/release/stefanesco/obsidize?include_prereleases&label=release)](https://github.com/stefanesco/obsidize/releases/latest)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-[![Clojure](https://img.shields.io/badge/Clojure-1.12.1-green.svg)](https://clojure.org)
 
 Obsidize is a tool that aims to make it easy to import and maintain the conversation history exported from Claude in Obsidian - it converts the raw json files that Anthropic provides into a structured folder with proper linking and metadata, and implements an update process that keeps any local edits and adds only the new conversations.
 
@@ -20,11 +19,11 @@ Obsidize is a tool that aims to make it easy to import and maintain the conversa
 
 - **🔄 Incremental Updates**: Detection of new and updated content - only processes what's changed
 - **📦 Flexible Input Support**: Works with Claude data packs in .dms archive or folder format
-- **🗂️ Structured Output**: Creates an organized Obsidian folder with conversations and projects notes
+- **🗂️ Structured Output**: Creates an organized, "Obsidian friendly" folder with conversations and projects notes
 - **📋 Rich Metadata**: Includes YAML frontmatter with UUIDs, timestamps, and relationships
-- **🏷️ Custom Tagging**: Allows adding custom tags and links to imported content via the command line
+- **🏷️ Custom Tagging**: Allows adding custom Obsidian tags and links to imported content via the command line
 - **🛡️ Resilient Processing**: Handles missing or malformed data with detailed error reporting
-- **🔄 Sync-Safe**: As it doesn't use any local/external state files the updates work across devices
+- **🔄 Sync-Safe**: doesn't use any local/external state files so that the updates work across devices
 - **🔍 Dry Run Mode**: Allows to preview changes before applying them
 - **📊 Progress Reporting**: Clear feedback on what's being processed and updated
 
@@ -32,11 +31,11 @@ Obsidize is a tool that aims to make it easy to import and maintain the conversa
 
 ### 📦 **Packaging Strategy**
 
-Obsidize uses an **optimized packaging strategy** that provides the best installation method for each platform:
+Obsidize uses an **packaging strategy** that reflects my access to different platforms:
 
 1. **📄 Universal JAR**: Works on any platform with Java 21+ 
 2. **🍺 Platform-Optimized Homebrew Packages**:
-   - **macOS ARM64**: Native executable (GraalVM) - fastest startup, no Java required
+   - **macOS ARM64**: Native executable (GraalVM) - fastest startup, no Java required (the platform on which it is developed and tested)
    - **macOS x86**: JLink runtime bundle - includes optimized JRE, reliable compatibility
    - **Linux**: JLink runtime bundle - includes optimized JRE, reliable cross-distro support
 
@@ -56,9 +55,7 @@ Obsidize uses an **optimized packaging strategy** that provides the best install
 
 ### ⚠️ **Development Status**
 
-- **Windows**: Universal JAR available, optimized packaging in development
-  - Build system integration is incomplete  
-  - Tracked in [Windows Support Roadmap](#-windows-support-roadmap)
+- **Windows**: Universal JAR available, optimized packaging in development: it was my target to support Windows from the begining but unfortunatelly I don't have a Windows system to debug and test on - so this is work in progress.
 
 ## 🚀 Quick Install
 
@@ -195,44 +192,13 @@ For the list of full options, run `obsidize --help` (see below for details).
 - [Clojure CLI](https://clojure.org/guides/install_clojure)
 - [Babashka](https://babashka.org/) (optional, for development tasks)
 
-### Basic Usage
-
-1. **First-time import of Claude data:**
-
-```bash
-clojure -M -m obsidize.core --input claude-export.dms --output-dir my-obsidian-vault
-```
-
-2. **Update existing vault with new Claude data (incremental - default behavior):**
-
-```bash
-# Smart incremental update - only processes new/updated content
-clojure -M -m obsidize.core --input new-claude-export.dms --output-dir my-obsidian-vault
-
-# Preview what would be updated without making changes
-clojure -M -m obsidize.core --input new-export.dms --output-dir vault --dry-run
-
-# Force complete re-import (ignores existing vault)
-clojure -M -m obsidize.core --input export.dms --output-dir vault --force-full
-```
-
-3. **Advanced options:**
-
-```bash
-clojure -M -m obsidize.core \
-  --input claude-export.dms \
-  --output-dir vault/ \
-  --tags ai,claude,imported \
-  --links "[[Knowledge Base]]","[[AI Conversations]]" \
-  --verbose
-```
 
 ## 📚 Comprehensive Usage Examples
 
 ### Example 1: First-Time Import (Happy Path)
 
 ```bash
-$ clojure -M -m obsidize.core --input claude-export-2025-08-06.dms --output-dir my-vault --verbose
+obsidize --input claude-export-2025-08-06.dms --output-dir my-vault --verbose
 
 Starting Claude to Obsidian conversion...
 Options: {:input claude-export-2025-08-06.dms, :output-dir my-vault, :incremental true, :verbose true}
@@ -261,7 +227,7 @@ Creating file: my-vault/AI Research Project/2_experiment-design.md
 ### Example 2: Incremental Update (Happy Path)
 
 ```bash
-$ clojure -M -m obsidize.core --input claude-export-2025-08-07.dms --output-dir my-vault
+obsidize --input claude-export-2025-08-07.dms --output-dir my-vault
 
 Starting Claude to Obsidian conversion...
 Found 18 conversations and 4 projects in Claude export.
@@ -291,7 +257,7 @@ Creating file: my-vault/Machine Learning Experiment/1_dataset-analysis.md
 ### Example 3: Dry Run (Preview Mode)
 
 ```bash
-$ clojure -M -m obsidize.core --input claude-export-large.dms --output-dir production-vault --dry-run
+obsidize --input claude-export-large.dms --output-dir production-vault --dry-run
 
 Starting Claude to Obsidian conversion...
 Found 150 conversations and 25 projects in Claude export.
@@ -310,7 +276,7 @@ Found 120 existing files in vault: 100 conversations, 20 projects.
 ### Example 4: Force Full Re-import
 
 ```bash
-$ clojure -M -m obsidize.core --input claude-export.dms --output-dir vault --force-full --verbose
+obsidize --input claude-export.dms --output-dir vault --force-full --verbose
 
 Starting Claude to Obsidian conversion...
 Found 10 conversations and 2 projects in Claude export.
@@ -332,7 +298,7 @@ Found 0 existing files in vault: 0 conversations, 0 projects.  # Existing vault 
 ### Example 5: Missing Input File
 
 ```bash
-$ clojure -M -m obsidize.core --input nonexistent.dms --output-dir vault
+obsidize --input nonexistent.dms --output-dir vault
 
 Error parsing arguments:
 Input file must exist
@@ -343,7 +309,7 @@ Input file must exist
 ### Example 6: Corrupted Data Pack
 
 ```bash
-$ clojure -M -m obsidize.core --input corrupted.dms --output-dir vault
+obsidize --input corrupted.dms --output-dir vault
 
 Starting Claude to Obsidian conversion...
 ❌ Error processing Claude data pack:
@@ -355,7 +321,7 @@ Starting Claude to Obsidian conversion...
 ### Example 7: Malformed Claude Data (Robust Handling)
 
 ```bash
-$ clojure -M -m obsidize.core --input malformed-export.dms --output-dir vault --verbose
+obsidize --input malformed-export.dms --output-dir vault --verbose
 
 Starting Claude to Obsidian conversion...
 Found 12 conversations and 3 projects in Claude export.
@@ -384,7 +350,7 @@ Found 5 existing files in vault: 4 conversations, 1 projects.
 ### Example 8: Permission Issues
 
 ```bash
-$ clojure -M -m obsidize.core --input export.dms --output-dir /root/protected-folder
+obsidize --input export.dms --output-dir /root/protected-folder
 
 Starting Claude to Obsidian conversion...
 Found 5 conversations and 1 projects in Claude export.
@@ -396,7 +362,7 @@ Exception: Permission denied - unable to create output directory
 ### Example 9: Large Dataset with Progress Tracking
 
 ```bash
-$ clojure -M -m obsidize.core --input huge-export.dms --output-dir enterprise-vault --verbose
+obsidize --input huge-export.dms --output-dir enterprise-vault --verbose
 
 Starting Claude to Obsidian conversion...
 Found 500 conversations and 50 projects in Claude export.
@@ -455,6 +421,7 @@ obsidize_version: 1.0.0
 ```
 
 This metadata enables:
+
 - **Precise update detection**: Only import content newer than `obsidized_at`
 - **Cross-device compatibility**: No external state files needed for Obsidian sync
 - **Recovery capabilities**: Can always resume by rescanning vault structure
