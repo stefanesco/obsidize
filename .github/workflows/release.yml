@@ -387,6 +387,9 @@ jobs:
     needs: release
     if: github.event_name == 'push' || github.event.inputs['dry-run'] == 'false'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
       - name: Download platform artifacts for Homebrew
         uses: actions/download-artifact@v4
         with:
