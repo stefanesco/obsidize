@@ -38,7 +38,7 @@ env:
   # -----------------------------------------------------------------------------
   # Java and Build Tool Versions
   # -----------------------------------------------------------------------------
-  JAVA_VERSION: ${{ vars.JAVA_VERSION || '21' }}
+  JAVA_VERSION: ${{ vars.JAVA_VERSION || '24' }}
   JAVA_DISTRIBUTION: ${{ vars.JAVA_DISTRIBUTION || 'graalvm' }}
   BABASHKA_VERSION: ${{ vars.BABASHKA_VERSION || 'latest' }}
   CLJ_KONDO_VERSION: ${{ vars.CLJ_KONDO_VERSION || 'latest' }}

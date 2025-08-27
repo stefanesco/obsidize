@@ -310,12 +310,11 @@
    "-Dclojure.compiler.direct-linking=true"
    "-Dclojure.spec.skip-macros=true"
 
-   ;; Class init tuning (adjust as needed)
-   "--initialize-at-build-time=clojure.lang,clojure,java.util.zip"
-   "--initialize-at-run-time=clojure.pprint__init,clojure.pprint.dispatch__init,clojure.data.json__init"
-
-   ;; Optional tracing during build init
-   "--trace-class-initialization=clojure.data.json__init,clojure.pprint__init,clojure.pprint.dispatch__init"])
+   ;; Class init strategy - let everything needed initialize at build time
+   ;; This avoids the runtime initialization conflicts seen in CI
+   "--initialize-at-build-time=clojure.lang,clojure.core,clojure.data.json,clojure.pprint,java.util.zip"
+   ;; Only keep truly runtime-sensitive classes at runtime
+   "--initialize-at-run-time=clojure.core.server"])
 
 (defn native-image [_]
   (println "🚀 Building native image... (This may take a while)")
