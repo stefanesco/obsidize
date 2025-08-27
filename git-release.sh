@@ -142,4 +142,4 @@ echo
 echo "Next steps:"
 echo "  - Watch the GitHub Actions pipeline (Create Release workflow)."
 echo "  - Once done, verify the GitHub Release and the Homebrew tap formula."
-echo "  - On macOS: brew tap stefanesco/obsidize && brew install stefanesco/obsidize/obsidize"`
+echo "  - On macOS: brew tap stefanesco/obsidize && brew install stefanesco/obsidize/obsidize"
