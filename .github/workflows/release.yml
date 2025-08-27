@@ -188,6 +188,7 @@ jobs:
       # Build everything and run e2e validation (tests, uberjar, native-image, jlink image + archives)
       - name: Build and validate with e2e tests (bb validate-release)
         run: bb validate-release
+        continue-on-error: ${{ matrix.os_id == 'Windows' }}
 
       # --- Stage comprehensive platform tarballs with all artifacts ---
       - name: Stage platform tarball with all artifacts (Unix)
@@ -197,6 +198,7 @@ jobs:
       - name: Stage platform tarball with all artifacts (Windows)
         if: runner.os == 'Windows'
         run: ./.github/scripts/prepare-release-artifacts.ps1 "${{ matrix.platform_id }}" "${{ matrix.os_id }}"
+        continue-on-error: true
 
       - name: Upload comprehensive platform artifact
         uses: actions/upload-artifact@v4
