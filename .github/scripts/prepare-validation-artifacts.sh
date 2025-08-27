@@ -37,13 +37,44 @@ else
   exit 1
 fi
 
-# Check for native binary on macOS
+# Platform-specific validation based on our build strategy
 OS_ID="${1:-}"
+ARCH="${2:-}"
+
 if [[ "$OS_ID" == "macOS" ]]; then
-  if [[ -f target/release/test-validation/bin/obsidize-native ]]; then
-    echo "✅ Found native binary for macOS"
+  if [[ "$ARCH" == "arm64" ]]; then
+    # macOS ARM64: Should have native executable at bin/obsidize (no jlink components)
+    echo "ℹ️  Validating macOS ARM64 native-only package..."
+    if [[ -f target/release/test-validation/bin/obsidize ]]; then
+      echo "✅ Found native executable for macOS ARM64"
+    else
+      echo "❌ Missing native executable at bin/obsidize for macOS ARM64"
+      exit 1
+    fi
   else
-    echo "❌ Missing native binary for macOS"
+    # macOS x86: Should have jlink launcher at bin/obsidize (no native binary)
+    echo "ℹ️  Validating macOS x86 jlink runtime package..."
+    if [[ -f target/release/test-validation/bin/obsidize ]]; then
+      echo "✅ Found jlink launcher for macOS x86"
+      # Verify it's actually a JLink package by checking for JRE components
+      if [[ -d target/release/test-validation/lib ]]; then
+        echo "✅ Confirmed jlink runtime structure (lib/ directory present)"
+      else
+        echo "❌ Missing jlink runtime structure for macOS x86"
+        exit 1
+      fi
+    else
+      echo "❌ Missing jlink launcher at bin/obsidize for macOS x86"
+      exit 1
+    fi
+  fi
+else
+  # Linux: Should have jlink launcher (same validation as macOS x86)
+  echo "ℹ️  Validating Linux jlink runtime package..."
+  if [[ -d target/release/test-validation/lib ]]; then
+    echo "✅ Confirmed jlink runtime structure for Linux"
+  else
+    echo "❌ Missing jlink runtime structure for Linux"
     exit 1
   fi
 fi

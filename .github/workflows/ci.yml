@@ -20,16 +20,14 @@ env:
   CLJ_KONDO_VERSION: ${{ vars.CLJ_KONDO_VERSION || 'latest' }}
 
   # Clojure CLI Configuration
-  CLOJURE_CLI_VERSION: ${{ vars.CLOJURE_CLI_VERSION || '1.12.1.1550' }}
-  CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || 'aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d' }}
+  CLOJURE_CLI_VERSION: ${{ vars.CLOJURE_CLI_VERSION || '1.12.2.1565' }}
+  CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || 'aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179' }}
   CLOJURE_DOWNLOAD_URL: ${{ vars.CLOJURE_DOWNLOAD_URL || 'https://download.clojure.org/install' }}
 
   # Security Tool Configuration
   TRIVY_GPG_KEY_ID: ${{ vars.TRIVY_GPG_KEY_ID || 'E9D0A3616276FA6C' }}
   TRIVY_PUBLIC_KEY_URL: ${{ vars.TRIVY_PUBLIC_KEY_URL || 'https://aquasecurity.github.io/trivy-repo/deb/public.key' }}
 
-  # Windows Package Manager Configuration
-  CHOCOLATEY_CLOJURE_VERSION: ${{ vars.CHOCOLATEY_CLOJURE_VERSION || '1.12.1.1550' }}
 
 jobs:
   build:
@@ -81,12 +79,13 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           java-version: ${{ env.JAVA_VERSION }}
 
-      # Babashka + clj-kondo on all OS
-      - name: Setup Clojure tools (bb, clj-kondo)
+      # Babashka + clj-kondo + Clojure CLI on all OS
+      - name: Setup Clojure tools (bb, clj-kondo, cli)
         uses: DeLaGuardo/setup-clojure@13.4
         with:
           bb: latest
           clj-kondo: latest
+          cli: ${{ env.CLOJURE_CLI_VERSION }}
 
       # Clojure CLI per-OS
       - name: Install Clojure CLI (Linux)
@@ -97,13 +96,6 @@ jobs:
         if: runner.os == 'macOS'
         run: ./.github/scripts/install-clojure-macos.sh
 
-      - name: Install Clojure CLI (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          Write-Output "⚠️ Attempting Windows Clojure installation (experimental)"
-          ./.github/scripts/install-clojure-windows.ps1
 
       # Trivy only on Linux
       - name: Install Trivy (Linux)
@@ -149,7 +141,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Output "📊 Windows Build Summary:"
-          Write-Output "  - Clojure CLI installation: Experimental (known issues)"
+          Write-Output "  - Clojure CLI installation: Via setup-clojure action (unified)"
           Write-Output "  - Lint/Test execution: Best effort"
           Write-Output "  - Status: Non-blocking (warnings only)"
           Write-Output ""

@@ -18,26 +18,16 @@ Obsidize is a tool that aims to make it easy to import and maintain the conversa
 ## ✨ Features
 
 - **🔄 Incremental Updates**: Detection of new and updated content - only processes what's changed
-- **📦 Flexible Input Support**: Works with Claude data packs in .dms archive or folder format
-- **🗂️ Structured Output**: Creates an organized, "Obsidian friendly" folder with conversations and projects notes
+- **📦 Smart input**: Auto-detects if the input is an archive(e.g. dms) or a folder
+- **🗂️ Structured Output**: Creates an organized, "Obsidian friendly" folder structure for your conversations and projects
 - **📋 Rich Metadata**: Includes YAML frontmatter with UUIDs, timestamps, and relationships
 - **🏷️ Custom Tagging**: Allows adding custom Obsidian tags and links to imported content via the command line
 - **🛡️ Resilient Processing**: Handles missing or malformed data with detailed error reporting
-- **🔄 Sync-Safe**: doesn't use any local/external state files so that the updates work across devices
-- **🔍 Dry Run Mode**: Allows to preview changes before applying them
-- **📊 Progress Reporting**: Clear feedback on what's being processed and updated
+- **🔄 Sync-Safe**: doesn't use any local/external state files so the incremental updates can be run from different devices
+- **🔍 Dry Run Mode**: Allows the preview of changes before applying them
+
 
 ## &#128190; Obsidize Package Distribution
-
-### 📦 **Packaging Strategy**
-
-Obsidize uses an **packaging strategy** that reflects my access to different platforms:
-
-1. **📄 Universal JAR**: Works on any platform with Java 21+ 
-2. **🍺 Platform-Optimized Homebrew Packages**:
-   - **macOS ARM64**: Native executable (GraalVM) - fastest startup, no Java required (the platform on which it is developed and tested)
-   - **macOS x86**: JLink runtime bundle - includes optimized JRE, reliable compatibility
-   - **Linux**: JLink runtime bundle - includes optimized JRE, reliable cross-distro support
 
 ### ✅ **Supported Platforms**
 
@@ -48,7 +38,7 @@ Obsidize uses an **packaging strategy** that reflects my access to different pla
   - 🥇 **Homebrew** (JLink runtime - recommended)
   - 📄 Universal JAR
 - **Linux (x86_64)**:
-  - 🥇 **Homebrew** (JLink runtime - recommended) 
+  - 🥇 **Homebrew** (JLink runtime - recommended)
   - 📄 Universal JAR
 - **All Java Platforms**:
   - 📄 **Universal JAR** (requires Java 21+)
@@ -64,6 +54,7 @@ Obsidize uses an **packaging strategy** that reflects my access to different pla
 If not done already, install [Homebrew](https://brew.sh/)
 
 Install/Update `obsidize`:
+
 ```bash
 # Install
 brew install stefanesco/obsidize/obsidize
@@ -77,10 +68,13 @@ brew upgrade obsidize
 From the [latest GitHub release](https://github.com/stefanesco/obsidize/releases/latest):
 
 **📄 Universal JAR (All Platforms)**
+
 ```bash
 # Download obsidize-standalone.jar
 # Requires Java 21+ installed
 java -jar obsidize-standalone.jar --help
+java -jar obsidize-standalone.jar -i <input-file.dms> -o <output-dir>
+
 ```
 
 **🍺 Platform-Optimized Packages**
@@ -177,21 +171,59 @@ For the list of full options, run `obsidize --help` (see below for details).
 - Use `--verbose` for detailed output.
 - Output structure: Conversations as individual .md files; projects as folders with overviews and documents.
 
-## 🚀 Quick Start
+## 📦 Output Structure
 
-### Prerequisites
+### Frontmatter Schema
 
-#### To use
+Each imported file includes comprehensive metadata:
 
-- all releases contain a selfcontained executable and also the standalone jar.
+```yaml
+---
+uuid: conv-123abc456def
+created_at: 2025-08-04T10:30:00Z
+updated_at: 2025-08-04T15:45:00Z  
+obsidized_at: 2025-08-06T09:15:00Z    # Key: When last imported/updated
+type: conversation                     # conversation, project-overview, project-document
+source: claude-export
+obsidize_version: 1.0.0
+---
+```
 
-#### To build
+This metadata enables:
 
-- Java
-- Native image: GraalVM
-- [Clojure CLI](https://clojure.org/guides/install_clojure)
-- [Babashka](https://babashka.org/) (optional, for development tasks)
+- **Precise update detection**: Only import content newer than `obsidized_at`
+- **Cross-device compatibility**: No external state files needed for Obsidian sync
+- **Recovery capabilities**: Can always resume by rescanning vault structure
+- **Version tracking**: Know exactly when and how content was imported
 
+### File Naming Strategy
+
+- **Conversations**: `{sanitized-title}__{uuid}.md`
+- **Project Overviews**: `{sanitized-project-name}.md`
+- **Project Documents**: `{index}_{sanitized-filename}.md`
+- **Folders**: `{sanitized-project-name}/`
+
+All names are sanitized for cross-platform compatibility while preserving readability.
+
+### Output Structure
+
+```
+my-obsidian-vault/
+├── daily-planning__conv-123abc.md           # Conversation files
+├── coding-help__conv-456def.md              # UUID in filename for uniqueness
+├── research-notes__conv-789ghi.md
+├── AI Research Project/                     # Project folders
+│   ├── ai-research-project.md              # Project overview with document links
+│   ├── 1_literature-review.md              # Chronologically ordered documents
+│   └── 2_experiment-design.md
+├── Machine Learning Experiment/
+│   ├── machine-learning-experiment.md
+│   ├── 1_dataset-analysis.md
+│   ├── 2_model-training.md
+│   └── 3_results-evaluation.md
+└── Personal Notes/
+    └── personal-notes.md                    # Projects with no documents
+```
 
 ## 📚 Comprehensive Usage Examples
 
@@ -393,8 +425,7 @@ Updating file: enterprise-vault/Research Initiative/research-initiative.md
 
 1. **Vault Scanning**: Reads existing Obsidian files and extracts `obsidized_at` timestamps from frontmatter
 2. **Change Detection**: Compares vault timestamps with Claude's `updated_at` timestamps  
-3. **Smart Planning**: Creates detailed update plan showing exactly what will be processed
-4. **Selective Execution**: Only processes content that has actually changed
+3. **Selective Execution**: Only processes content that has actually changed
 
 ### Update Types Explained
 
@@ -404,59 +435,6 @@ Updating file: enterprise-vault/Research Initiative/research-initiative.md
 - **Updated projects**: Project metadata or documents changed → Update relevant files
 - **Unchanged content**: No updates needed → Skip entirely (very fast)
 
-### Frontmatter Schema
-
-Each imported file includes comprehensive metadata:
-
-```yaml
----
-uuid: conv-123abc456def
-created_at: 2025-08-04T10:30:00Z
-updated_at: 2025-08-04T15:45:00Z  
-obsidized_at: 2025-08-06T09:15:00Z    # Key: When last imported/updated
-type: conversation                     # conversation, project-overview, project-document
-source: claude-export
-obsidize_version: 1.0.0
----
-```
-
-This metadata enables:
-
-- **Precise update detection**: Only import content newer than `obsidized_at`
-- **Cross-device compatibility**: No external state files needed for Obsidian sync
-- **Recovery capabilities**: Can always resume by rescanning vault structure
-- **Version tracking**: Know exactly when and how content was imported
-
-## 📦 Output Structure
-
-Obsidize creates a well-organized Obsidian vault:
-
-```
-my-obsidian-vault/
-├── daily-planning__conv-123abc.md           # Conversation files
-├── coding-help__conv-456def.md              # UUID in filename for uniqueness
-├── research-notes__conv-789ghi.md
-├── AI Research Project/                     # Project folders
-│   ├── ai-research-project.md              # Project overview with document links
-│   ├── 1_literature-review.md              # Chronologically ordered documents
-│   └── 2_experiment-design.md
-├── Machine Learning Experiment/
-│   ├── machine-learning-experiment.md
-│   ├── 1_dataset-analysis.md
-│   ├── 2_model-training.md
-│   └── 3_results-evaluation.md
-└── Personal Notes/
-    └── personal-notes.md                    # Projects with no documents
-```
-
-### File Naming Strategy
-
-- **Conversations**: `{sanitized-title}__{uuid}.md`
-- **Project Overviews**: `{sanitized-project-name}.md`
-- **Project Documents**: `{index}_{sanitized-filename}.md`
-- **Folders**: `{sanitized-project-name}/`
-
-All names are sanitized for cross-platform compatibility while preserving readability.
 
 ## 🧪 Testing & Development
 
@@ -464,7 +442,7 @@ All names are sanitized for cross-platform compatibility while preserving readab
 
 The project includes **comprehensive test coverage** with 520+ test assertions across multiple test categories:
 
-- **Unit Tests** (96 test suites, 480+ assertions): Data validation, frontmatter parsing, timestamp logic, filename sanitization
+- **Unit Tests** (96+ test suites, 480+ assertions): Data validation, frontmatter parsing, timestamp logic, filename sanitization
 - **Integration Tests**: Full vault scanning, update planning, message appending
 - **End-to-End Tests** (5 test suites, 36 assertions): Package validation with real CLI execution
 - **Edge Case Tests**: Empty vaults, malformed data, permission issues, large datasets
@@ -591,7 +569,7 @@ bb test                 # Test suite execution
 # GitHub repository secrets (optional - uses secure defaults)
 vars:
   JAVA_VERSION: "21"                    # Override Java version
-  CLOJURE_CLI_VERSION: "1.12.1.1550"   # Pin Clojure CLI version
+  CLOJURE_CLI_VERSION: "1.12.2.1565"   # Pin Clojure CLI version
   TRIVY_GPG_KEY_ID: "E9D0A3616276FA6C" # Override security keys
 ```
 
@@ -616,6 +594,7 @@ bb dist                 # List built artifacts
 ```
 
 **Artifact Types**:
+
 1. **Native Executables**: 
    - `obsidize-native-{version}-macos-aarch64.tar.gz`
    - Standalone binaries (macOS ARM64 only)
@@ -631,6 +610,7 @@ bb dist                 # List built artifacts
    - Universal compatibility, requires Java 21+
 
 **Required Configurations**:
+
 ```yaml
 # GitHub repository secrets (required for release)
 secrets:
@@ -651,6 +631,7 @@ vars:
 | **Release** | GraalVM 21 | **Optimized per Platform** | Yes (Linux) | Linux, macOS (x64/arm64), ⚠️ Windows* | **JAR + Platform-Optimized** |
 
 **Release Artifacts by Platform:**
+
 - **macOS ARM64**: Universal JAR + Native executable package  
 - **macOS x86**: Universal JAR + JLink runtime package
 - **Linux**: Universal JAR + JLink runtime package
@@ -666,19 +647,6 @@ vars:
 # GraalVM with native-image tool
 bb native-prereqs      # Check prerequisites
 ```
-
-**Platform Support**:
-
-- **macOS ARM64**: ✅ **Production ready** - Native executables for Homebrew distribution
-- **macOS x86**: ❌ **Not supported** - Native-image issues, uses JLink runtime instead
-- **Linux**: 🔄 **Not prioritized** - JLink provides better cross-distro compatibility  
-- **Windows**: ❌ **Not supported** - Build system issues prevent compilation
-
-**Native Image Features**:
-- **ZIP file handling**: Complete java.util.zip support
-- **Reflection configuration**: Pre-configured for Clojure runtime
-- **System integration**: File I/O, environment variables, process execution
-- **Diagnostics**: Built-in troubleshooting with `--diagnostics` flag
 
 **Configuration Files**:
 ```
@@ -706,7 +674,7 @@ CLOJURE_INSTALL_SHA256: "custom-hash" # Custom installer validation
 TRIVY_GPG_KEY_ID: "custom-key-id"     # Override security keys
 
 # GitHub Actions versions
-CHECKOUT_ACTION_VERSION: "v4"         # Pin for security compliance
+CHECKOUT_ACTION_VERSION: "v5"         # Pin for security compliance
 CACHE_ACTION_VERSION: "v3"           # Use older cache action
 ```
 
@@ -764,6 +732,7 @@ export CLJ_CONFIG='{:mvn/local-repo ".m2"}'
 ```
 
 **CI Pipeline Optimization**:
+
 - **Caching**: Clojure dependencies, Trivy database cached automatically
 - **Parallel execution**: Matrix builds run concurrently  
 - **Early termination**: `fail-fast: false` allows all platforms to complete
@@ -783,10 +752,11 @@ target/release/{version}/
 ```
 
 **Platform-Specific Build Outputs:**
-- **macOS ARM64**: Universal JAR + Native executable package
-- **macOS x86**: Universal JAR + JLink runtime package
-- **Linux**: Universal JAR + JLink runtime package  
-- **Windows**: Universal JAR only (optimized packaging in development)
+
+- **macOS ARM64**: Native executable package
+- **macOS x86**:   JLink runtime package
+- **Linux**:       JLink runtime package  
+- **Windows**:     Universal JAR only (optimized packaging in development)
 
 Use `bb dist` to list all available artifacts after a build.
 
@@ -997,6 +967,7 @@ graph TD
      - **Unit Tests:** Cross-platform compatibility testing
 
 **Key Features:**
+
 - **Fast Feedback:** Unit tests complete quickly (typically < 2 minutes)
 - **Cross-Platform Validation:** Ensures code works on all supported platforms
 - **Security-First:** Comprehensive security scanning on Linux
@@ -1102,23 +1073,17 @@ The build system uses verified checksums and GPG keys for security validation. T
 
 | Component | Type | Value | Verification Date |
 |-----------|------|-------|-------------------|
-| **Clojure CLI** | SHA256 | `aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d` | 2025-08-20 |
-| **Trivy** | GPG Key ID | `E9D0A3616276FA6C` | 2025-08-20 |
-| **Chocolatey Clojure** | Version | `1.12.1.1550` | 2025-08-20 |
+| **Clojure CLI** | SHA256 | `aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179` | 2025-08-27 |
+| **Trivy** | GPG Key ID | `E9D0A3616276FA6C` | 2025-08-17 |
+
 
 #### Verification Process
 
 **For Clojure CLI SHA256:**
 ```bash
 # Download the installer script
-curl -fsSL https://download.clojure.org/install/linux-install-1.12.1.1550.sh -o linux-install-1.12.1.1550.sh
-
-# Generate and verify SHA256 checksum
-sha256sum linux-install-1.12.1.1550.sh
-# Should output: aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d
-
-# Clean up
-rm linux-install-1.12.1.1550.sh
+curl -s https://download.clojure.org/install/clojure-tools-1.12.2.1565.tar.gz | shasum -a 256
+# Should output: aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179
 ```
 
 **For Trivy GPG Key:**
@@ -1137,19 +1102,12 @@ file trivy.key
 rm trivy.key
 ```
 
-**For Chocolatey Clojure Version:**
-```bash
-# Verify version exists on Chocolatey
-# Check: https://community.chocolatey.org/packages/clojure
-# Version 1.12.1.1550 is confirmed available and approved
-```
 
 #### Authoritative Sources
 
 - **Clojure CLI**: https://download.clojure.org/install/
 - **Trivy GPG Key**: https://aquasecurity.github.io/trivy-repo/deb/public.key
 - **Trivy Releases**: https://github.com/aquasecurity/trivy/releases
-- **Chocolatey Clojure**: https://community.chocolatey.org/packages/clojure
 
 #### Updating Security Values
 
@@ -1170,13 +1128,7 @@ When updating tool versions, follow this process:
    # Update TRIVY_GPG_KEY_ID in workflow files
    ```
 
-3. **Update Chocolatey version:**
-   ```bash
-   # Check available versions at https://community.chocolatey.org/packages/clojure
-   # Update CHOCOLATEY_CLOJURE_VERSION in workflow files
-   ```
-
-4. **Update configuration:**
+3. **Update configuration:**
    - **Recommended**: Set new values using GitHub repository variables (see [Configurable Build Environment](#️-configurable-build-environment))
    - **Alternative**: Update defaults in workflow files:
      - `.github/workflows/ci.yml`
@@ -1218,19 +1170,18 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 | `SETUP_CLOJURE_ACTION_VERSION` | `13.4` | DeLaGuardo/setup-clojure version |
 | `SETUP_GRAALVM_ACTION_VERSION` | `v1` | graalvm/setup-graalvm version (Release only) |
 | `UPLOAD_ARTIFACT_ACTION_VERSION` | `v4` | actions/upload-artifact version (Release only) |
-| `DOWNLOAD_ARTIFACT_ACTION_VERSION` | `v4` | actions/download-artifact version (Release only) |
+| `DOWNLOAD_ARTIFACT_ACTION_VERSION` | `v5` | actions/download-artifact version (Release only) |
 | `GH_RELEASE_ACTION_VERSION` | `v2` | softprops/action-gh-release version (Release only) |
 
 #### Security and Tool Configuration
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `CLOJURE_CLI_VERSION` | `1.12.1.1550` | Clojure CLI version to install |
-| `CLOJURE_INSTALL_SHA256` | `aea202cd...` | SHA256 checksum for Linux installer validation |
+| `CLOJURE_CLI_VERSION` | `1.12.2.1565` | Clojure CLI version to install |
+| `CLOJURE_INSTALL_SHA256` | `aa3d11aa...` | SHA256 checksum for Linux installer validation |
 | `CLOJURE_DOWNLOAD_URL` | `https://download.clojure.org/install` | Base URL for Clojure CLI downloads |
 | `TRIVY_GPG_KEY_ID` | `E9D0A3616276FA6C` | GPG Key ID for Trivy validation |
 | `TRIVY_PUBLIC_KEY_URL` | `https://aquasecurity.github.io/trivy-repo/deb/public.key` | URL for Trivy public key |
-| `CHOCOLATEY_CLOJURE_VERSION` | `1.12.1.1550` | Clojure version for Windows Chocolatey install |
 
 ### Configuration Benefits
 
@@ -1252,38 +1203,17 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 
 All variables (except input path) have sensible defaults, so workflows will continue to work even if no custom variables are configured. The syntax `${{ vars.VARIABLE_NAME || 'default-value' }}` ensures robust fallback behavior.
 
-## 🪟 Windows Support Roadmap
-
-### Current Status: ❌ Not Working
-
-Windows support is currently in development. The main issues preventing Windows builds:
-
-#### **Known Issues**
-
-1. **Clojure CLI Installation Failure**
-   - Chocolatey package installs successfully but `clojure` command not accessible
-   - PowerShell PATH configuration issues in GitHub Actions environment
-   - Missing executables in expected installation directories
-
-2. **Build System Integration**
-   - Windows-specific script execution challenges
-   - Cross-platform build tooling gaps
-   - Native image compilation not yet tested
-
-3. **Testing Infrastructure**
-   - Limited Windows testing coverage in CI pipeline
-   - Package validation needs Windows-specific adjustments
 
 #### **Development Progress**
 
 **✅ Completed:**
 - GitHub Actions Windows runner setup
 - Non-blocking Windows builds (warnings only)
-- Chocolatey-based Clojure installation scripts
+- Unified Clojure CLI installation via setup-clojure action
 - Cross-platform build detection logic
 
 **🔄 In Progress:**
-- PowerShell Clojure CLI installation debugging
+- Windows-specific packaging optimizations
 - Windows package artifact generation
 - Cross-platform path handling improvements
 
@@ -1299,6 +1229,7 @@ Windows support is currently in development. The main issues preventing Windows 
 Windows support development is community-driven. If you have Windows expertise and would like to help:
 
 1. **Test the current state:**
+  
    ```bash
    git clone https://github.com/stefanesco/obsidize
    cd obsidize
@@ -1306,7 +1237,7 @@ Windows support development is community-driven. If you have Windows expertise a
    ```
 
 2. **Debug installation issues:**
-   - Review `.github/scripts/install-clojure-windows.ps1`
+   - Review `.github/scripts/*` and `.github/workflows/*` for Windows-specific logic
    - Test Clojure CLI installation locally
    - Identify PATH and PowerShell execution issues
 
@@ -1315,31 +1246,11 @@ Windows support development is community-driven. If you have Windows expertise a
    - Submit PRs with Windows-specific fixes
    - Help improve cross-platform compatibility
 
-#### **Workaround for Windows Users**
-
-Until native Windows support is ready, Windows users can:
-
-1. **Use WSL (Windows Subsystem for Linux):**
-   ```bash
-   # Install WSL and Ubuntu
-   # Then follow Linux installation instructions
-   brew install stefanesco/obsidize/obsidize
-   ```
-
-2. **Use Java JAR directly:**
-   ```bash
-   # Requires Java 21+ installed
-   java -jar obsidize-standalone.jar --input data.dms --output-dir vault/
-   ```
-
-3. **Docker container (future):**
-   - Docker support planned for cross-platform compatibility
-
 #### **Timeline**
 
-- **Short term** (next release): Fix Clojure CLI installation
+- **Short term** (next release): Improve Windows package generation
 - **Medium term** (2-3 releases): Windows JLink runtime packages  
-- **Long term** (future releases): Windows native executables, Chocolatey/Scoop packages
+- **Long term** (future releases): Windows native executables, Scoop packages
 
 ---
 

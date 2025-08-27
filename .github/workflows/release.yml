@@ -32,7 +32,7 @@ env:
   SETUP_GRAALVM_ACTION_VERSION: ${{ vars.SETUP_GRAALVM_ACTION_VERSION || 'v1' }}
   SETUP_CLOJURE_ACTION_VERSION: ${{ vars.SETUP_CLOJURE_ACTION_VERSION || '13.4' }}
   UPLOAD_ARTIFACT_ACTION_VERSION: ${{ vars.UPLOAD_ARTIFACT_ACTION_VERSION || 'v4' }}
-  DOWNLOAD_ARTIFACT_ACTION_VERSION: ${{ vars.DOWNLOAD_ARTIFACT_ACTION_VERSION || 'v4' }}
+  DOWNLOAD_ARTIFACT_ACTION_VERSION: ${{ vars.DOWNLOAD_ARTIFACT_ACTION_VERSION || 'v5' }}
   GH_RELEASE_ACTION_VERSION: ${{ vars.GH_RELEASE_ACTION_VERSION || 'v2' }}
   
   # -----------------------------------------------------------------------------
@@ -46,9 +46,9 @@ env:
   # -----------------------------------------------------------------------------
   # Clojure CLI Configuration
   # -----------------------------------------------------------------------------
-  CLOJURE_CLI_VERSION: ${{ vars.CLOJURE_CLI_VERSION || '1.12.1.1550' }}
-  # Generated: 2025-08-20 - curl -fsSL https://download.clojure.org/install/linux-install-1.12.1.1550.sh | sha256sum
-  CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || 'aea202cd0573d79fd8b7db1b608762645a8f93006a86bc817ec130bed1d9707d' }}
+  CLOJURE_CLI_VERSION: ${{ vars.CLOJURE_CLI_VERSION || '1.12.2.1565' }}
+  # Generated: 2025-08-27 - curl -s https://download.clojure.org/install/clojure-tools-1.12.2.1565.tar.gz | shasum -a 256
+  CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || 'aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179' }}
   CLOJURE_DOWNLOAD_URL: ${{ vars.CLOJURE_DOWNLOAD_URL || 'https://download.clojure.org/install' }}
   
   # -----------------------------------------------------------------------------
@@ -57,11 +57,6 @@ env:
   # Trivy GPG Key ID: E9D0A3616276FA6C (current official key from aquasecurity/trivy releases)
   TRIVY_GPG_KEY_ID: ${{ vars.TRIVY_GPG_KEY_ID || 'E9D0A3616276FA6C' }}
   TRIVY_PUBLIC_KEY_URL: ${{ vars.TRIVY_PUBLIC_KEY_URL || 'https://aquasecurity.github.io/trivy-repo/deb/public.key' }}
-  
-  # -----------------------------------------------------------------------------
-  # Windows Package Manager Configuration
-  # -----------------------------------------------------------------------------
-  CHOCOLATEY_CLOJURE_VERSION: ${{ vars.CHOCOLATEY_CLOJURE_VERSION || '1.12.1.1550' }}
 
 permissions:
   contents: write
@@ -143,6 +138,7 @@ jobs:
         with:
           bb: latest
           clj-kondo: latest
+          cli: ${{ env.CLOJURE_CLI_VERSION }}
 
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
@@ -164,11 +160,6 @@ jobs:
           Write-Output "Failures here will not block the release process."
           Write-Output ""
 
-      - name: Install Clojure CLI (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        continue-on-error: true
-        run: ./.github/scripts/install-clojure-windows.ps1
 
       - name: Install Trivy (Linux)
         if: runner.os == 'Linux'
@@ -272,6 +263,7 @@ jobs:
         with:
           bb: latest
           clj-kondo: latest
+          cli: ${{ env.CLOJURE_CLI_VERSION }}
 
       - name: Install Clojure CLI (Linux)
         if: runner.os == 'Linux'
@@ -293,15 +285,10 @@ jobs:
           Write-Output "Failures here will not block the release process."
           Write-Output ""
 
-      - name: Install Clojure CLI (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        continue-on-error: true
-        run: ./.github/scripts/install-clojure-windows.ps1
 
       - name: Prepare downloaded artifacts for testing (Unix)
         if: runner.os != 'Windows'
-        run: ./.github/scripts/prepare-validation-artifacts.sh "${{ matrix.os_id }}"
+        run: ./.github/scripts/prepare-validation-artifacts.sh "${{ matrix.os_id }}" "${{ matrix.arch }}"
 
       - name: Prepare downloaded artifacts for testing (Windows)
         if: runner.os == 'Windows'
