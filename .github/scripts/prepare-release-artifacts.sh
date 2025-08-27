@@ -67,4 +67,5 @@ shasum -a 256 "$TAR_NAME" | awk '{print $1}' > "${TAR_NAME}.sha256"
 
 echo "✅ Created comprehensive tarball: $TAR_NAME"
 echo "Contents:"
-tar -tzf "$TAR_NAME" | head -20
+# Avoid SIGPIPE when head closes pipe before tar finishes
+(tar -tzf "$TAR_NAME" | head -20) 2>/dev/null || echo "Archive contents preview unavailable"
