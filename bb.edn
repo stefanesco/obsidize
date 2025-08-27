@@ -36,9 +36,10 @@
   ;; --- 
   init
   {:doc "Install all project dependencies (Clojure)."
-   :task (do (println "🔧 Initializing project and installing dependencies...")
-             (shell "clojure -P")
-             (println "✅ Dependencies installed."))}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (println "🔧 Initializing project and installing dependencies...")
+           (shell (str clj-cmd " -P"))
+           (println "✅ Dependencies installed."))}
 
   ;; --- 
   ;; LINTING TASKS
@@ -59,19 +60,20 @@
   ;; --- 
   test-unit
   {:doc "Run unit tests with Kaocha (excludes e2e tests)."
-   :task (try
-           (shell "clojure -M:test :unit")
-           (println "✅ All unit tests passed!")
-           (catch Exception e
-             (let [exit-code (:exit (ex-data e))]
-               (cond
-                 (= exit-code 1) (do
-                                   (println "⚠️  Some tests failed. Check output above for details.")
-                                   (println "   Use 'clojure -M:test :unit' directly for verbose output."))
-                 (= exit-code 2) (do
-                                   (println "⚠️  Test errors detected. Check output above for details.")
-                                   (println "   Use 'clojure -M:test :unit' directly for verbose output."))
-                 :else (throw e)))))}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (try
+             (shell (str clj-cmd " -M:test :unit"))
+             (println "✅ All unit tests passed!")
+             (catch Exception e
+               (let [exit-code (:exit (ex-data e))]
+                 (cond
+                   (= exit-code 1) (do
+                                     (println "⚠️  Some tests failed. Check output above for details.")
+                                     (println "   Use 'clojure -M:test :unit' directly for verbose output."))
+                   (= exit-code 2) (do
+                                     (println "⚠️  Test errors detected. Check output above for details.")
+                                     (println "   Use 'clojure -M:test :unit' directly for verbose output."))
+                   :else (throw e))))))}
 
   test
   {:doc "Run all unit tests."
@@ -79,11 +81,11 @@
 
   test-e2e
   {:doc "Run end-to-end package validation tests with compiled artifacts."
-   :task (do
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
            (println "🧪 Running end-to-end package validation tests...")
            (println "   This validates JAR, native image, and CLI functionality with real data.")
            (try
-             (shell "clojure -M:test :e2e")
+             (shell (str clj-cmd " -M:test :e2e"))
              (println "✅ E2E package validation tests passed!")
              (catch Exception e
                (let [exit-code (:exit (ex-data e))]
@@ -102,19 +104,20 @@
   ;; --- 
   audit
   {:doc "Check for outdated Clojure dependencies with antq (Linux only)."
-   :task (when (= "Linux" (System/getProperty "os.name"))
-           (println "🔬 Checking for outdated dependencies on Linux...")
-           (try
-             (shell "clojure -M:antq")
-             (println "✅ Dependency audit completed successfully.")
-             (catch Exception e
-               (let [exit-code (:exit (ex-data e))]
-                 (cond
-                   (= exit-code 1) (println "⚠️  Dependency audit found issues (non-blocking).")
-                   (= exit-code 2) (println "⚠️  Dependency audit errors detected (non-breaking).")
-                   :else (do
-                           (println "⚠️  Dependency audit failed unexpectedly (non-breaking).")
-                           (println "   Error:" (.getMessage e))))))))}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (when (= "Linux" (System/getProperty "os.name"))
+             (println "🔬 Checking for outdated dependencies on Linux...")
+             (try
+               (shell (str clj-cmd " -M:antq"))
+               (println "✅ Dependency audit completed successfully.")
+               (catch Exception e
+                 (let [exit-code (:exit (ex-data e))]
+                   (cond
+                     (= exit-code 1) (println "⚠️  Dependency audit found issues (non-blocking).")
+                     (= exit-code 2) (println "⚠️  Dependency audit errors detected (non-breaking).")
+                     :else (do
+                             (println "⚠️  Dependency audit failed unexpectedly (non-breaking).")
+                             (println "   Error:" (.getMessage e)))))))))}
 
   check-trivy
   {:doc "Check if Trivy is installed and available on the PATH."
@@ -125,9 +128,9 @@
 
   generate-pom
   {:doc "Generate pom.xml from deps.edn for vulnerability scanning."
-   :task (do
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
            (fs/create-dirs "target")
-           (shell "clojure -Spom > target/pom.xml"))}
+           (shell (str clj-cmd " -Spom > target/pom.xml")))}
 
   trivy-scan
   {:doc "Run Trivy to scan for vulns and licenses, generating a report."
@@ -190,7 +193,8 @@
   uber-runtime
   {:doc "Build a standalone uberjar of the application (runtime)."
    :override-builtin true
-   :task (shell "clojure -T:build uber-runtime")}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (shell (str clj-cmd " -T:build uber-runtime")))}
 
   native-prereqs
   {:doc "Check for GraalVM native-image prerequisites."
@@ -203,15 +207,18 @@
   native-image
   {:doc "Build a native executable using GraalVM (uses native uber JAR and flags)."
    :depends [native-prereqs]
-   :task (shell "clojure -T:build native-image")}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (shell (str clj-cmd " -T:build native-image")))}
 
   jlink-image
   {:doc "Create jlink runtime image and archive (bundles native exe on macOS ARM64 if present)."
-   :task (shell "clojure -T:build jlink-image")}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (shell (str clj-cmd " -T:build jlink-image")))}
 
   package
   {:doc "Build runtime uber, native image, and jlink archive."
-   :task (shell "clojure -T:build build-all")}
+   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+           (shell (str clj-cmd " -T:build build-all")))}
 
   verify-package
   {:doc "Build all packages and run end-to-end tests against them."
