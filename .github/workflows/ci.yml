@@ -21,7 +21,7 @@ env:
 
   # Clojure CLI Configuration
   CLOJURE_CLI_VERSION: ${{ vars.CLOJURE_CLI_VERSION || '1.12.2.1565' }}
-  CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || 'aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179' }}
+  CLOJURE_INSTALL_SHA256: ${{ vars.CLOJURE_INSTALL_SHA256 || '68442caaeaaa0780957953dfac11278e3991d3baeb22579fc582ed1b2d5cd152' }}
   CLOJURE_DOWNLOAD_URL: ${{ vars.CLOJURE_DOWNLOAD_URL || 'https://download.clojure.org/install' }}
 
   # Security Tool Configuration

@@ -1073,7 +1073,7 @@ The build system uses verified checksums and GPG keys for security validation. T
 
 | Component | Type | Value | Verification Date |
 |-----------|------|-------|-------------------|
-| **Clojure CLI** | SHA256 | `aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179` | 2025-08-27 |
+| **Clojure CLI** | SHA256 | `68442caaeaaa0780957953dfac11278e3991d3baeb22579fc582ed1b2d5cd152` | 2025-08-27 |
 | **Trivy** | GPG Key ID | `E9D0A3616276FA6C` | 2025-08-17 |
 
 
@@ -1082,8 +1082,8 @@ The build system uses verified checksums and GPG keys for security validation. T
 **For Clojure CLI SHA256:**
 ```bash
 # Download the installer script
-curl -s https://download.clojure.org/install/clojure-tools-1.12.2.1565.tar.gz | shasum -a 256
-# Should output: aa3d11aa020bfa981ba9d3271bebc27c78ab6b305503cae8db308a3a50f36179
+curl -fsSL https://download.clojure.org/install/linux-install-1.12.2.1565.sh | sha256sum
+# Should output: 68442caaeaaa0780957953dfac11278e3991d3baeb22579fc582ed1b2d5cd152
 ```
 
 **For Trivy GPG Key:**
@@ -1178,7 +1178,7 @@ The GitHub Actions workflows (CI and Release) now support configurable environme
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `CLOJURE_CLI_VERSION` | `1.12.2.1565` | Clojure CLI version to install |
-| `CLOJURE_INSTALL_SHA256` | `aa3d11aa...` | SHA256 checksum for Linux installer validation |
+| `CLOJURE_INSTALL_SHA256` | `68442caa...` | SHA256 checksum for Linux installer validation |
 | `CLOJURE_DOWNLOAD_URL` | `https://download.clojure.org/install` | Base URL for Clojure CLI downloads |
 | `TRIVY_GPG_KEY_ID` | `E9D0A3616276FA6C` | GPG Key ID for Trivy validation |
 | `TRIVY_PUBLIC_KEY_URL` | `https://aquasecurity.github.io/trivy-repo/deb/public.key` | URL for Trivy public key |
