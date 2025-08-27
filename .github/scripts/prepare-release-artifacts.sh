@@ -25,13 +25,13 @@ else
   exit 1
 fi
 
-# Include native image for macOS
-if [[ "${OS_ID}" == "macOS" && -f "${RELEASE_DIR}/obsidize-native" ]]; then
-  install -m 0755 "${RELEASE_DIR}/obsidize-native" "${STAGE_DIR}/bin/obsidize-native"
-  echo "✅ Added native image for macOS"
+# Include native image for macOS ARM64 (as the main executable)
+if [[ "${OS_ID}" == "macOS" && "${PLATFORM_ID}" == "macos-aarch64" && -f "${RELEASE_DIR}/obsidize-native" ]]; then
+  install -m 0755 "${RELEASE_DIR}/obsidize-native" "${STAGE_DIR}/bin/obsidize"
+  echo "✅ Added native executable for macOS ARM64"
 fi
 
-# Extract and include jlink distribution for all platforms
+# Extract and include jlink distribution (not needed for macOS ARM64 native-only builds)
 JLINK_ARCHIVE="$(ls "${RELEASE_DIR}"/obsidize-"${VERSION}"-${PLATFORM_ID}.* 2>/dev/null | head -n1 || true)"
 if [[ -n "$JLINK_ARCHIVE" ]]; then
   echo "✅ Found jlink archive: $JLINK_ARCHIVE"
@@ -56,8 +56,13 @@ if [[ -n "$JLINK_ARCHIVE" ]]; then
   
   rm -rf "$TEMP_EXTRACT"
 else
-  echo "❌ No jlink archive found for ${PLATFORM_ID}"
-  exit 1
+  # macOS ARM64 uses native-only builds (no jlink archive needed)
+  if [[ "${OS_ID}" == "macOS" && "${PLATFORM_ID}" == "macos-aarch64" ]]; then
+    echo "ℹ️  macOS ARM64 uses native executable only (no jlink archive needed)"
+  else
+    echo "❌ No jlink archive found for ${PLATFORM_ID}"
+    exit 1
+  fi
 fi
 
 # Create final tarball
