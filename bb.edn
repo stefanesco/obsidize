@@ -36,7 +36,10 @@
   ;; --- 
   init
   {:doc "Install all project dependencies (Clojure)."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (println "🔧 Initializing project and installing dependencies...")
            (shell (str clj-cmd " -P"))
            (println "✅ Dependencies installed."))}
@@ -60,7 +63,10 @@
   ;; --- 
   test-unit
   {:doc "Run unit tests with Kaocha (excludes e2e tests)."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (try
              (shell (str clj-cmd " -M:test :unit"))
              (println "✅ All unit tests passed!")
@@ -81,7 +87,10 @@
 
   test-e2e
   {:doc "Run end-to-end package validation tests with compiled artifacts."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (println "🧪 Running end-to-end package validation tests...")
            (println "   This validates JAR, native image, and CLI functionality with real data.")
            (try
@@ -104,7 +113,10 @@
   ;; --- 
   audit
   {:doc "Check for outdated Clojure dependencies with antq (Linux only)."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (when (= "Linux" (System/getProperty "os.name"))
              (println "🔬 Checking for outdated dependencies on Linux...")
              (try
@@ -128,7 +140,10 @@
 
   generate-pom
   {:doc "Generate pom.xml from deps.edn for vulnerability scanning."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (fs/create-dirs "target")
            (shell (str clj-cmd " -Spom > target/pom.xml")))}
 
@@ -193,7 +208,10 @@
   uber-runtime
   {:doc "Build a standalone uberjar of the application (runtime)."
    :override-builtin true
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (shell (str clj-cmd " -T:build uber-runtime")))}
 
   native-prereqs
@@ -207,17 +225,26 @@
   native-image
   {:doc "Build a native executable using GraalVM (uses native uber JAR and flags)."
    :depends [native-prereqs]
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (shell (str clj-cmd " -T:build native-image")))}
 
   jlink-image
   {:doc "Create jlink runtime image and archive (bundles native exe on macOS ARM64 if present)."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (shell (str clj-cmd " -T:build jlink-image")))}
 
   package
   {:doc "Build runtime uber, native image, and jlink archive."
-   :task (let [clj-cmd (if (.startsWith (System/getProperty "os.name") "Windows") "clojure.exe" "clojure")]
+   :task (let [clj-cmd (if (fs/which "clojure") "clojure"
+                           (if (fs/which "clojure.exe") "clojure.exe"
+                               (if (fs/which "clj") "clj"
+                                   (throw (ex-info "Clojure CLI not found in PATH. Please install Clojure CLI tools." {})))))]
            (shell (str clj-cmd " -T:build build-all")))}
 
   verify-package
