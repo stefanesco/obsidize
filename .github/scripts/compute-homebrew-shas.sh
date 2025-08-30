@@ -19,7 +19,7 @@ echo "Artifacts tree:"
 ls -R artifacts || true
 
 # macOS: Look for ARM64 native executable and x86 JLink runtime packages
-ARM_TGZ="$(find artifacts -type f -name "obsidize-native-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
+ARM_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-aarch64.tar.gz" -print -quit || true)"
 AMD_TGZ="$(find artifacts -type f -name "obsidize-${VERSION}-macos-x64.tar.gz" -print -quit || true)"
 
 if [[ -z "$ARM_TGZ" || -z "$AMD_TGZ" ]]; then
@@ -27,7 +27,7 @@ if [[ -z "$ARM_TGZ" || -z "$AMD_TGZ" ]]; then
   find artifacts -type f -name "obsidize-*.tar.gz" -maxdepth 2 -print
   echo ""
   echo "Expected files:"
-  echo "  - obsidize-native-${VERSION}-macos-aarch64.tar.gz (native executable)"
+  echo "  - obsidize-${VERSION}-macos-aarch64.tar.gz (native executable)"
   echo "  - obsidize-${VERSION}-macos-x64.tar.gz (JLink runtime)"
   exit 1
 fi

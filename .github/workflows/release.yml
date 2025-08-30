@@ -66,9 +66,79 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Build universal JAR once and share across all platform builds
+  build-universal-jar:
+    name: Build Universal JAR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Cache Clojure dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.m2/repository
+            ~/.gitlibs
+            ~/.clojure
+          key: ${{ runner.os }}-clojure-${{ hashFiles('**/deps.edn') }}
+          restore-keys: |
+            ${{ runner.os }}-clojure-
+
+      - name: Set up GraalVM
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Clojure tools
+        uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          bb: latest
+          clj-kondo: latest
+          cli: ${{ env.CLOJURE_CLI_VERSION }}
+
+      - name: Install Clojure CLI
+        run: ./.github/scripts/install-clojure-linux.sh
+
+      - name: Install Trivy
+        run: ./.github/scripts/install-trivy-linux.sh
+
+      - name: Set Release Version
+        run: ./.github/scripts/validate-version.sh "${{ github.event.inputs.version || github.ref_name }}"
+
+      - name: Build universal JAR
+        run: |
+          bb init
+          bb lint  
+          bb test-unit
+          bb verify
+          bb uber-runtime
+
+      - name: Rename JAR to universal name
+        run: |
+          VERSION="$(echo "${RELEASE_VERSION}" | sed 's/^v//')"
+          RELEASE_DIR="target/release/${VERSION}"
+          if [[ -f "${RELEASE_DIR}/obsidize-standalone.jar" ]]; then
+            cp "${RELEASE_DIR}/obsidize-standalone.jar" "obsidize.jar"
+            echo "✅ Created universal JAR: obsidize.jar"
+          else
+            echo "❌ Missing standalone JAR"
+            exit 1
+          fi
+
+      - name: Upload universal JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-jar
+          path: obsidize.jar
+          retention-days: 7
+
   build-release:
     name: Build ${{ matrix.name }} (${{ matrix.package_type }})
     continue-on-error: ${{ matrix.os_id == 'Windows' }}
+    needs: build-universal-jar
     strategy:
       fail-fast: false
       matrix:
@@ -101,6 +171,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Download universal JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: universal-jar
+          path: .
 
       - name: Cache Clojure dependencies
         uses: actions/cache@v4
@@ -177,10 +253,58 @@ jobs:
         if: runner.os == 'Windows'
         run: ./.github/scripts/validate-version.ps1 "${{ github.event.inputs.version || github.ref_name }}"
 
-      # Build everything and run e2e validation (tests, uberjar, native-image, jlink image + archives)
-      - name: Build and validate with e2e tests (bb validate-release)
-        run: bb validate-release
-        continue-on-error: ${{ matrix.os_id == 'Windows' }}
+      # Place universal JAR in expected location for platform builds (Unix)
+      - name: Place universal JAR in build directory (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          VERSION="$(echo "${RELEASE_VERSION}" | sed 's/^v//')"
+          RELEASE_DIR="target/release/${VERSION}"
+          mkdir -p "${RELEASE_DIR}"
+          cp obsidize.jar "${RELEASE_DIR}/obsidize-standalone.jar"
+          echo "✅ Placed universal JAR at ${RELEASE_DIR}/obsidize-standalone.jar"
+
+      # Place universal JAR in expected location for platform builds (Windows)
+      - name: Place universal JAR in build directory (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Version = $env:RELEASE_VERSION -replace '^v', ''
+          $ReleaseDir = "target/release/$Version"
+          New-Item -ItemType Directory -Path $ReleaseDir -Force
+          Copy-Item "obsidize.jar" "$ReleaseDir/obsidize-standalone.jar"
+          Write-Output "✅ Placed universal JAR at $ReleaseDir/obsidize-standalone.jar"
+
+      # Build only platform-specific packages (native-image or jlink) - JAR already exists
+      - name: Build platform-specific packages (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          echo "🔧 Building platform-specific packages for ${{ matrix.package_type }}"
+          case "${{ matrix.package_type }}" in
+            "Native Executable")
+              echo "Building native executable..."
+              bb native-image
+              bb test-e2e
+              ;;
+            "JLink Runtime")
+              echo "Building JLink runtime..."  
+              bb jlink-image
+              bb test-e2e
+              ;;
+            *)
+              echo "❌ Unknown package type: ${{ matrix.package_type }}"
+              exit 1
+              ;;
+          esac
+
+      # Windows: JAR only, run tests  
+      - name: Build platform-specific packages (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Write-Output "🔧 Building Windows platform package (JAR Only)"
+          Write-Output "Universal JAR is already available - just running tests"
+          bb test-e2e
 
       # --- Stage comprehensive platform tarballs with all artifacts ---
       - name: Stage platform tarball with all artifacts (Unix)
@@ -306,11 +430,18 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs:
+      - build-universal-jar
       - build-release
       - validate-packages
     if: always() && (needs.build-release.result == 'success' || contains(needs.build-release.result, 'success'))
     steps:
-      - name: Download all artifacts
+      - name: Download universal JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: universal-jar
+          path: .
+
+      - name: Download platform artifacts
         uses: actions/download-artifact@v4
         with:
           pattern: 'platform-*'
@@ -350,7 +481,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            # comprehensive platform tarballs (include standalone JAR, jlink, and native where available)
+            # Universal JAR for all platforms
+            obsidize.jar
+            # Platform-specific packages for Homebrew distribution
             obsidize-*.tar.gz
             obsidize-*.tar.gz.sha256
           generate_release_notes: true
@@ -358,21 +491,26 @@ jobs:
           body: |
             ## Package Distribution Strategy
             
-            **📄 Universal JAR:** `obsidize-standalone.jar`
+            **📄 Universal JAR:** `obsidize.jar`
             - Works on any platform with Java 21+
-            - Usage: `java -jar obsidize-standalone.jar --help`
+            - Single file download, no dependencies
+            - Usage: `java -jar obsidize.jar --help`
             
-            **🍺 Homebrew Packages:**
+            **🍺 Homebrew Packages:** `brew install stefanesco/obsidize/obsidize`
             - **macOS ARM64**: Native executable (fastest startup, no Java required)
             - **macOS x86**: JLink runtime bundle (includes optimized JRE)
             - **Linux**: JLink runtime bundle (includes optimized JRE)
-            - Install: `brew install stefanesco/obsidize/obsidize`
             
-            **✅ Stable Platforms:**
-            - **macOS ARM64**: Native executable via Homebrew
-            - **macOS x86**: JLink runtime via Homebrew  
-            - **Linux (amd64)**: JLink runtime via Homebrew  
-            - **All platforms**: Universal JAR for direct Java usage
+            ## Download Options
+            
+            **✅ Recommended:**
+            - **Universal JAR**: Download `obsidize.jar` for any platform with Java 21+
+            - **Homebrew**: Run `brew install stefanesco/obsidize/obsidize` for optimized platform binaries
+            
+            **🔧 Platform-specific packages** (for Homebrew distribution):
+            - `obsidize-*-macos-aarch64.tar.gz`: Native executable for macOS ARM64
+            - `obsidize-*-macos-x64.tar.gz`: JLink runtime for macOS x86
+            - `obsidize-*-linux-amd64.tar.gz`: JLink runtime for Linux amd64
             
             **⚠️ Development Status:**
             - **Windows**: Universal JAR available, native packaging in development
