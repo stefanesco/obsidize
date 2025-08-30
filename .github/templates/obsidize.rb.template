@@ -40,11 +40,11 @@ class Obsidize < Formula
         
         if (libexec/"bin/obsidize").exist?
           # Create wrapper for JLink package
-          bin.write "obsidize", <<~EOS
+          (bin/"obsidize").write <<~EOS
             #!/bin/bash
             exec "#{libexec}/bin/obsidize" "$@"
           EOS
-          chmod 0755, bin/"obsidize"
+          (bin/"obsidize").chmod 0755
         else
           odie "No jlink executable found in macOS x86 package"
         end
@@ -55,11 +55,11 @@ class Obsidize < Formula
       
       if (libexec/"bin/obsidize").exist?
         # Create wrapper for JLink package
-        bin.write "obsidize", <<~EOS
+        (bin/"obsidize").write <<~EOS
           #!/bin/bash
           exec "#{libexec}/bin/obsidize" "$@"
         EOS
-        chmod 0755, bin/"obsidize"
+        (bin/"obsidize").chmod 0755
       else
         odie "No jlink executable found in Linux package"
       end
