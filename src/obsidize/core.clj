@@ -18,9 +18,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def app-version
-  (try
-    (-> "obsidize/version.edn" io/resource slurp edn/read-string :version)
-    (catch Exception _ "DEV")))
+  (or 
+    ;; First try system property (set during native image build)
+    (System/getProperty "obsidize.version")
+    ;; Fall back to resource file (for JAR/development)
+    (try
+      (-> "obsidize/version.edn" io/resource slurp edn/read-string :version)
+      (catch Exception _ "DEV"))))
 
 (defn exit
   "Wrapper for System/exit to allow mocking in tests."

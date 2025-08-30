@@ -259,6 +259,7 @@
 
 (defn generate-native-config [_]
   (println "🤔 Generating native-image configuration...")
+  (write-version-file nil) ; Ensure version file exists before tracing
   (clojure.java.io/make-parents (str native-config-dir "/_.keep"))
   (let [run-basis (b/create-basis {:project "deps.edn"})]
     (run-with-agent run-basis "--help")
@@ -272,6 +273,7 @@
 
 (defn uber-native [_]
   (println "📦 Creating native uberjar (with :native alias + configs)...")
+  (write-version-file nil) ; Ensure version file is written before building
   (let [native-basis (b/create-basis {:project "deps.edn" :aliases [:native]})]
     (b/copy-dir {:src-dirs ["src" "resources"] ;; includes generated configs
                  :target-dir class-native-dir})
@@ -299,6 +301,9 @@
 
    ;; comment next line for portable binaries
    "-march=native"
+
+   ;; Embed version at build time
+   (str "-Dobsidize.version=" version)
 
    ;; Logging / diagnostics
    "--verbose"
