@@ -357,6 +357,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Download universal JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: universal-jar
+          path: .
+
       - name: Download artifacts for validation
         uses: actions/download-artifact@v4
         with:

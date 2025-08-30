@@ -2,18 +2,18 @@
 set -euo pipefail
 
 # Prepare downloaded artifacts for e2e validation testing
-echo "📦 Setting up comprehensive artifacts for e2e validation..."
+echo "📦 Setting up platform-specific artifacts for e2e validation..."
 ls -la validation-artifacts/ || echo "No artifacts found"
 
 # Create target structure expected by e2e tests
 mkdir -p target/release/test-validation
 
-# Extract the comprehensive platform tarball
+# Extract the platform-specific tarball
 PLATFORM_TAR="$(find validation-artifacts -name "obsidize-*.tar.gz" | head -n1)"
 if [[ -n "$PLATFORM_TAR" ]]; then
   echo "✅ Found platform tarball: $PLATFORM_TAR"
   tar -xzf "$PLATFORM_TAR" -C target/release/test-validation/ --strip-components=1
-  echo "✅ Extracted comprehensive platform artifacts"
+  echo "✅ Extracted platform-specific artifacts"
 else
   echo "❌ No platform tarball found"
   exit 1
@@ -22,18 +22,34 @@ fi
 echo "Contents of target/release/test-validation/:"
 ls -la target/release/test-validation/ || echo "Empty"
 
-# Verify expected artifacts are present
-if [[ -f target/release/test-validation/obsidize-standalone.jar ]]; then
-  echo "✅ Found standalone JAR"
+# Set up universal JAR for e2e tests (downloaded separately)
+if [[ -f "obsidize.jar" ]]; then
+  # Place universal JAR in the standard location expected by e2e tests  
+  mkdir -p target/release
+  cp obsidize.jar target/release/obsidize-standalone.jar
+  echo "✅ Placed universal JAR for e2e validation"
 else
-  echo "❌ Missing standalone JAR"
-  exit 1
+  echo "⚠️  Universal JAR not found - e2e JAR tests will be skipped"
 fi
 
+# Set up platform-specific executables for e2e tests
 if [[ -f target/release/test-validation/bin/obsidize ]]; then
-  echo "✅ Found jlink launcher script"
+  # Copy platform executable to where e2e tests expect to find it
+  mkdir -p target/release
+  if [[ -x target/release/test-validation/bin/obsidize ]]; then
+    # For native executables, copy directly
+    if [[ ! -d target/release/test-validation/lib ]]; then
+      cp target/release/test-validation/bin/obsidize target/release/obsidize-native
+      echo "✅ Set up native executable for e2e validation"
+    else
+      # For jlink packages, create a symlink to the jlink structure
+      ln -sf "$(pwd)/target/release/test-validation" target/release/jlink-package
+      echo "✅ Set up jlink package for e2e validation" 
+    fi
+  fi
+  echo "✅ Found platform launcher script"
 else
-  echo "❌ Missing jlink launcher script"
+  echo "❌ Missing platform launcher script"
   exit 1
 fi
 
