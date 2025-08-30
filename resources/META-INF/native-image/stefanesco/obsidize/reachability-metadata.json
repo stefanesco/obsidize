@@ -3114,6 +3114,15 @@
       ]
     },
     {
+      "type": "obsidize.core$eval1352",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$eval136",
       "methods": [
         {
@@ -3384,7 +3393,25 @@
       ]
     },
     {
+      "type": "obsidize.core$fn__1289",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "obsidize.core$fn__1290",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "obsidize.core$fn__1291",
       "methods": [
         {
           "name": "<init>",
