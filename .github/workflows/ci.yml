@@ -1,6 +1,9 @@
 name: CI
 
 on:
+  schedule:
+  - cron: "30 4 * * 6"
+  
   push:
     branches: [main]
   pull_request:
