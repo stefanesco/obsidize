@@ -31,8 +31,6 @@
                         (-> create-time (str/split #"T") first))]
       (str date-prefix " " first-q))))
 
-;; Function moved to utils namespace
-
 (defn generate-markdown-for-new-note
   "Pure: builds {:title :filename :content} for a conversation.
    Includes :tags and :links (from options) in the frontmatter if provided.
@@ -124,8 +122,8 @@
                                                  (.isAfter msg-time obsidized-at)
                                                  (not (contains? existing-signatures signature)))))))
                               (sort-by :create_time))
-            new-obsidized-at (utils/current-timestamp)
-            ;; FIXED: Include the actual conversation data in updated frontmatter
+            new-obsidized-at (or (:updated_at conversation) (utils/current-timestamp))
+            ;; Include the actual conversation data in updated frontmatter
             updated-frontmatter (merge
                                  (when (:updated_at conversation)
                                    {:updated_at (:updated_at conversation)})
